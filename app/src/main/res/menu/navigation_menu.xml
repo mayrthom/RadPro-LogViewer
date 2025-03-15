@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_devices"
+        android:title="USB Devices" />
+
+    <item
+        android:id="@+id/nav_dat_list"
+        android:title="Datalogs List" />
+
+    <item
+        android:id="@+id/nav_info"
+        android:title="Info" />
+
+</menu>

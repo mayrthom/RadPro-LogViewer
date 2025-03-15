@@ -1,0 +1,21 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.RadProLogViewer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:textColor">@color/black</item>
+    </style>
+
+    <style name="Theme.RadProLogViewer.Base" parent="Theme.RadProLogViewer">
+        <!--color settings-->
+        <item name="colorPrimary">@color/mainColor</item>
+        <item name="colorSecondary">@color/mainColor</item>
+        <!--status bar settings-->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="colorPrimaryDark">@color/mainColor</item>
+        <item name="android:statusBarColor">@color/mainColor</item>
+        <!--menu color of activity bar-->
+        <item name="colorControlNormal">@color/black</item>
+    </style>
+
+
+</resources>
