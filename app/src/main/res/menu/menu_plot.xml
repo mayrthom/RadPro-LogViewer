@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/circles"
+        android:title="Circles On/Off" />
+
+    <item
+        android:id="@+id/grid"
+        android:title="Grid On/Off" />
+
+    <item
+        android:id="@+id/unit_sievert"
+        android:title="Unit [μSv/h]"
+        android:checkable="true"/>
+
+    <item
+        android:id="@+id/unit_cpm"
+        android:title="Unit [CPM]"
+        android:checkable="true"/>
+
+    <item
+        android:id="@+id/unit_cps"
+        android:title="Unit [CPS]"
+        android:checkable="true"/>
+
+
+</menu>
