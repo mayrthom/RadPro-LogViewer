@@ -1,5 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+<resources>
     <style name="Theme.RadProLogViewer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:textColor">@color/black</item>
     </style>

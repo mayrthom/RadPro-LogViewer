@@ -6,6 +6,8 @@ This android app displays and stores the logged data of geigercounters with the 
 - Load logged data from Geiger counter.
 - Plot logged data.
 - Store logged data locally on the android device.
+- Combine data from multiple logs of the same device and display them in one chart, to get a longer radiation profile
+- Adaptive moving average filter with variable filter window, so the radiation plot can be smoothed.
 - Export .csv files of logged data in the format "Timestamp[unix time],radiation[CPS]"
 - The app also has a dark mode, which is set according to the current system mode.
 
@@ -15,20 +17,18 @@ Each datalog is stored on the Android device along with information about the Ge
 Currently there's just the APK-file provided under the realese section, which can be installed on any android device above android version „Oreo“ 8.0 (API 26). In future it may be provided at the android play store, but for now it is a beta version. 
 
 ## To-dos in future
-- Design a clear and structured ER model for the Room database to optimize data processing. Currently, each datalog is stored as a class, and the list of entries is serialized as JSON to be stored in the Room database.
-- Enable the combination of data from multiple logs and display them in a shared chart.
+
 - Add the option to view the chart on a logarithmic scale.
-- Expand functionality with additional features, such as overlaying the radiation profile with GPS position or implementing an adjustable moving average filter, and much more.
+- Expand functionality with additional features, such as live datalogging with GPS tracking.
 
 ## Credits
 The app uses the following libraries:
 - [usb-serial-for-android](https://github.com/mik3y/usb-serial-for-android) - For the serial USB Connection
 - [MPAndroidChart](https://github.com/PhilJay/MPAndroidChart) - For plotting the data
-- GSON - To serialize the List as JSON in order to store it in the Room Database
 - Room - for storing downloaded datalogs persistently
 ## Screenshots
 The peak in the diagram was produced with a check source, to check if it is working correctly.  
-<img src="screenshots/screenshot2.jpeg" height="600"> <img src="screenshots/screenshot3.jpeg" height="600">
+<img src="screenshots/screenshot2.jpeg" height="600"> <img src="screenshots/screenshot3.jpeg" height="600"> <img src="screenshots/screenshot4.jpeg" height="600">
 
 <img src="screenshots/screenshot1.jpeg" >  
 

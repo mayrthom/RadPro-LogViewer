@@ -14,13 +14,13 @@ import android.view.View;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
 
-import com.mayrthom.radprologviewer.dataloglist.DatalogListFragment;
-import com.mayrthom.radprologviewer.serial.DevicesFragment;
+import com.mayrthom.radprologviewer.ui.StoredDatalogsListFragment;
+import com.mayrthom.radprologviewer.ui.USBDevicesFragment;
 import com.google.android.material.navigation.NavigationView;
+import com.mayrthom.radprologviewer.ui.StoredDevicesListFragment;
 
 
 public class MainActivity extends AppCompatActivity {
-    // Declare the DrawerLayout, NavigationView, and Toolbar
     private DrawerLayout drawerLayout;
 
     @Override
@@ -40,14 +40,20 @@ public class MainActivity extends AppCompatActivity {
         FragmentManager fragmentManager = getSupportFragmentManager();
         navigationView.setNavigationItemSelectedListener(item -> {
             if (item.getItemId() == R.id.nav_devices) {
-                fragmentManager.beginTransaction().replace(R.id.fragment_container, new DevicesFragment()).addToBackStack(null).commit();
+                fragmentManager.beginTransaction().replace(R.id.fragment_container, new USBDevicesFragment()).addToBackStack(null).commit();
                 drawerLayout.closeDrawers();
             }
 
             else if (item.getItemId() == R.id.nav_dat_list) {
-                fragmentManager.beginTransaction().replace(R.id.fragment_container, new DatalogListFragment()).addToBackStack(null).commit();
+                fragmentManager.beginTransaction().replace(R.id.fragment_container, new StoredDatalogsListFragment()).addToBackStack(null).commit();
                 drawerLayout.closeDrawers();
             }
+
+            else if (item.getItemId() == R.id.nav_dev_list) {
+                fragmentManager.beginTransaction().replace(R.id.fragment_container, new StoredDevicesListFragment()).addToBackStack(null).commit();
+                drawerLayout.closeDrawers();
+            }
+
             else if (item.getItemId() == R.id.nav_info) {
                 LayoutInflater inflater = LayoutInflater.from(MainActivity.this);
                 View dialogView = inflater.inflate(R.layout.info_layout, null);

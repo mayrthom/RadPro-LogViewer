@@ -23,5 +23,10 @@
         android:title="Unit [CPS]"
         android:checkable="true"/>
 
+    <item
+        android:id="@+id/filter"
+        android:title="Filter"
+        android:checkable="true"/>
+
 
 </menu>

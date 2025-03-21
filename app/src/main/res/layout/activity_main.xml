@@ -41,5 +41,4 @@
         app:itemTextAppearance="@style/DrawerTextStyle"
         app:headerLayout="@layout/nav_header_main"
         app:menu="@menu/navigation_menu" />
-
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".serial.ViewDevice"
-    android:background="?android:windowBackground">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginLeft="5dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginRight="5dp"
-        android:orientation="vertical">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:layout_marginLeft="5dp"
+android:layout_marginTop="10dp"
+android:layout_marginRight="5dp"
+android:orientation="vertical">
 
         <TextView
             android:id="@+id/textView"
@@ -28,7 +21,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="\?\?\?\n"
-            android:layout_marginRight="5dp"
+            android:layout_marginEnd="5dp"
             android:textSize="22sp"/>
 
         <Button
@@ -58,6 +51,4 @@
             android:gravity="center"
             android:textSize="24sp"
             android:textStyle="bold"/>
-    </LinearLayout>
-
-</FrameLayout>
+        </LinearLayout>
