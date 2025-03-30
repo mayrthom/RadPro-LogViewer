@@ -7,13 +7,11 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.lifecycle.LifecycleOwner;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mayrthom.radprologviewer.R;
 import com.mayrthom.radprologviewer.DataList;
 import com.mayrthom.radprologviewer.database.device.Device;
-import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -22,17 +20,13 @@ import java.util.List;
 import java.util.Locale;
 
 public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.DeviceViewHolder> {
-    private final List<Device> deviceList;
+    private final List<DataList> deviceList;
     private OnItemClickListener listener;
     private OnDeleteClickListener deleteListener;
     private OnExportClickListener exportListener;
-    private final LifecycleOwner lifecycleOwner;
-    private final SharedViewModel viewModel;
 
-    public DeviceListAdapter(SharedViewModel viewModel, LifecycleOwner lifecycleOwner) {
-        this.viewModel = viewModel;
-        this.lifecycleOwner = lifecycleOwner;
-        deviceList = new ArrayList<>();
+    public DeviceListAdapter() {
+        this.deviceList = new ArrayList<>();
     }
 
     public interface OnItemClickListener {
@@ -42,7 +36,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
         void onDeleteClick(Device device);
     }
     public interface OnExportClickListener {
-        void onExportClick(DataList dataList, Device device);
+        void onExportClick(DataList dataList);
     }
 
     @NonNull
@@ -54,13 +48,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
 
     @Override
     public void onBindViewHolder(@NonNull DeviceViewHolder holder, int position) {
-        Device device = deviceList.get(position); //get device
-
-        // get the dataPoints for the device
-        viewModel.getDataPointsForDevice(device.deviceId).removeObservers(lifecycleOwner);
-        viewModel.getDataPointsForDevice(device.deviceId).observe(lifecycleOwner, dataPoints -> {
-            if (dataPoints == null) return;
-            DataList dataList = new DataList(dataPoints, device.conversionValue);
+            DataList dataList = deviceList.get(position);
+            Device device = dataList.getDevice();
 
             //set text for item
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm", Locale.US);
@@ -75,9 +64,8 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
                 if (deleteListener != null) deleteListener.onDeleteClick(device);
                 });
             holder.buttonExport.setOnClickListener(v -> {
-                if (exportListener != null) exportListener.onExportClick(dataList, device);
+                if (exportListener != null) exportListener.onExportClick(dataList);
               });
-           });
 
     }
 
@@ -99,7 +87,7 @@ public class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.De
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    public void updateDevices(List<Device> newList) {
+    public void update(List<DataList> newList) {
         this.deviceList.clear();
         this.deviceList.addAll(newList);
         notifyDataSetChanged();

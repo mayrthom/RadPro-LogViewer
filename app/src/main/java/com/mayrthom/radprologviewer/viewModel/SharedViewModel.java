@@ -3,6 +3,7 @@ package com.mayrthom.radprologviewer.viewModel;
 import android.content.Context;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
@@ -12,6 +13,7 @@ import com.mayrthom.radprologviewer.database.device.Device;
 import com.mayrthom.radprologviewer.database.Repository;
 import com.mayrthom.radprologviewer.database.datalog.Datalog;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -37,30 +39,78 @@ public class SharedViewModel extends ViewModel {
     public void deleteDatalogWithPoints(Datalog datalog) {
         repository.deleteDatalogWithPoints(datalog);
     }
-    public LiveData<List<DataPoint>> getDataPointsForDatalog(long datalogId) {
-        return repository.getDataPointsForDatalog(datalogId);
-    }
     public void deleteDeviceWithDatalogs(Device device) {
         repository.deleteDeviceWithDatalogs(device);
     }
-
-    public LiveData<List<Datalog>> getAllDatalogs() {
-        return repository.getAllDatalogs();
+    public void addDatalogWithEntries(DataList dataPoints) {
+        repository.addDatalogWithEntries(dataPoints);
     }
 
-    public LiveData<Device> getDeviceById(long id) {
-        return repository.getDeviceById(id);
+    public LiveData<List<DataList>> getDataListForDevice() {
+        MediatorLiveData<List<DataList>> result = new MediatorLiveData<>();
+        List<DataList> dataLists = new ArrayList<>();
+        List<LiveData<?>> activeSources = new ArrayList<>();
+
+        result.addSource(repository.getAllDevices(), devices -> {
+            for (LiveData<?> source : activeSources) result.removeSource(source);
+            activeSources.clear();
+            dataLists.clear();
+
+            if (devices == null || devices.isEmpty()) {
+                result.setValue(new ArrayList<>());
+                return;
+            }
+            for (Device device : devices) {
+                LiveData<List<DataPoint>> datapointList = repository.getDataPointsForDevice(device.deviceId);
+                activeSources.add(datapointList);
+                result.addSource(datapointList, dataPoints -> {
+                    if (dataPoints == null || dataPoints.isEmpty()) return;
+                    dataLists.add(new DataList(dataPoints, device));
+                    if (dataLists.size() == devices.size()) {
+                        result.setValue(new ArrayList<>(dataLists));
+                    }
+                });
+            }
+        });
+        return result;
     }
 
-    public LiveData<List<Device>> getAllDevices() {
-        return repository.getAllDevices();
-    }
+    public LiveData<List<DataList>> getAllDatalogs() {
+        MediatorLiveData<List<DataList>> result = new MediatorLiveData<>();
+        List<DataList> dataLists = new ArrayList<>();
+        List<LiveData<?>> activeSources = new ArrayList<>();
 
-    public void addDatalogWithEntries(Device device, DataList dataPoints) {
-        repository.addDatalogWithEntries(device,dataPoints);
-    }
-    public LiveData<List<DataPoint>> getDataPointsForDevice(long deviceId) {
-        return repository.getDataPointsForDevice(deviceId);
+        result.addSource(repository.getAllDatalogs(), datalogs -> {
+            for (LiveData<?> source : activeSources)
+                result.removeSource(source);
+
+            activeSources.clear();
+            dataLists.clear();
+
+            if (datalogs == null || datalogs.isEmpty()) {
+                result.setValue(new ArrayList<>());
+                return;
+            }
+
+            for (Datalog datalog : datalogs) {
+                LiveData<List<DataPoint>> dataPointsLiveData = repository.getDataPointsForDatalog(datalog.datalogId);
+                activeSources.add(dataPointsLiveData);
+                result.addSource(dataPointsLiveData, dataPoints -> {
+                    if (dataPoints == null || dataPoints.isEmpty()) return;
+                    LiveData<Device> deviceLiveData = repository.getDeviceById(datalog.deviceId);
+                    activeSources.add(deviceLiveData);
+                    result.addSource(deviceLiveData, device -> {
+                        if (device == null) return;
+                        dataLists.add(new DataList(dataPoints, device, datalog));
+                        if (dataLists.size() == datalogs.size()) {
+                            result.setValue(new ArrayList<>(dataLists));
+                        }
+                    });
+                });
+            }
+        });
+
+        return result;
     }
 
 }

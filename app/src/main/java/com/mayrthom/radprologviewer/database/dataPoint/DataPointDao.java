@@ -10,17 +10,11 @@ import java.util.List;
 @Dao
 public interface DataPointDao {
     @Insert
-    void insertDataPoint(DataPoint dataPoint);
+    void insertAll(List<DataPoint> points);
 
     @Query("SELECT * FROM DataPoint WHERE datalogId = :datalogId")
     LiveData<List<DataPoint>> getDataPointsForDatalog(long datalogId);
 
     @Query("SELECT DISTINCT dp.* FROM DataPoint dp JOIN Datalog dl ON dp.datalogId = dl.datalogId WHERE dl.deviceId = :deviceId ORDER BY dp.timestamp ASC")
         LiveData<List<DataPoint>> getDataPointsForDevice(long deviceId);
-
-    @Query("DELETE FROM DataPoint WHERE datalogId = :datalogId")
-    void deleteDataPointsForDatalog(long datalogId);
-
-    @Query("DELETE FROM DataPoint WHERE datalogId IN (SELECT datalogId FROM Datalog WHERE deviceId = :deviceId)")
-    void deleteDataPointsForDevice(long deviceId);
 }

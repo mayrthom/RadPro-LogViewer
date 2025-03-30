@@ -40,8 +40,6 @@ public class Repository {
     public void deleteDeviceWithDatalogs(Device device)
     {
         executorService.execute(() ->{
-        deviceDao.getDeviceById(device.deviceId);
-        dataPointDao.deleteDataPointsForDevice(device.deviceId);
         deviceDao.deleteDevice(device.deviceId);
         });
     }
@@ -53,33 +51,27 @@ public class Repository {
     public void deleteDatalogWithPoints(Datalog datalog)
     {
         executorService.execute(() -> {
-            dataPointDao.deleteDataPointsForDatalog(datalog.datalogId);
             datalogDao.deleteDatalogById(datalog.datalogId);
             if (datalogDao.getDatalogCountForDevice(datalog.deviceId) == 0)
                 deviceDao.deleteDevice(datalog.deviceId);
         });
     }
-    public void addDatalogWithEntries(Device device, DataList entries) {
-        executorService.execute(() -> {
-            long deviceId = deviceDao.getDeviceIdBySerial(device.serialNumber);
-            if(deviceId == 0) {
-                deviceDao.insertDevice(device);
-                deviceId = deviceDao.getDeviceIdBySerial(device.serialNumber);
-            }
-            else
-            {
-                device.deviceId = deviceId;
+    public void addDatalogWithEntries(DataList datalist) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            Device device = datalist.getDevice();
+            long deviceId = device.deviceId;
+            if (deviceDao.exists(deviceId))
                 deviceDao.updateDevice(device); //update device in case the conversionvalue has changed.
-            }
+            else
+                deviceDao.insertDevice(device);
 
             Datalog datalog = new Datalog(System.currentTimeMillis(), deviceId);
             long datalogId = datalogDao.insertDatalog(datalog);
 
             // Now insert datapoints with tha according datalogId
-            for (DataPoint entry : entries) {
-                entry.datalogId = datalogId;
-                dataPointDao.insertDataPoint(entry);
-            }
+            datalist.setDatalogId(datalogId);
+            dataPointDao.insertAll(datalist);
         });
     }
 

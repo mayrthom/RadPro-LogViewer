@@ -8,10 +8,11 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 
-import androidx.room.Ignore;
-
 import com.github.mikephil.charting.data.Entry;
+import com.google.gson.Gson;
 import com.mayrthom.radprologviewer.database.dataPoint.DataPoint;
+import com.mayrthom.radprologviewer.database.datalog.Datalog;
+import com.mayrthom.radprologviewer.database.device.Device;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,27 +29,34 @@ import java.util.stream.IntStream;
  */
 public class DataList extends ArrayList<DataPoint> {
 
-    private float conversionFactor = 0;
+    //private float conversionFactor = 0;
+    private Device device;
+    private Datalog datalog;
 
-    @Ignore
-    public DataList (String csv, float conversionFactor)
+    public DataList (String csv, Device device)
     {
         super();
         super.addAll(createDataPointList(csv));
-        this.conversionFactor = conversionFactor;
+        this.device = device;
     }
 
-    //constructor for room database
-    public DataList () {
-        super();
-    }
-
-    public DataList (List<DataPoint>l , float conversionFactor) {
+    public DataList (List<DataPoint>l, Device device, Datalog datalog)
+    {
         super(l);
-        this.conversionFactor = conversionFactor;
+        this.device = device;
+        this.datalog = datalog;
     }
 
-    //creating the datalist from the csv input string
+
+    public DataList (List<DataPoint>l , Device device) {
+        super(l);
+        this.device = device;
+    }
+
+    public DataList () {
+    }
+
+     //creating the datalist from the csv input string
     private List<DataPoint> createDataPointList(String csv)
     {
         csv = csv.replaceAll("(\\r|\\n)", "");
@@ -82,6 +90,8 @@ public class DataList extends ArrayList<DataPoint> {
 
         ContentResolver resolver = context.getContentResolver();
         Uri csvUri;
+        Gson gson = new Gson();
+
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // Android 10+
             ContentValues values = new ContentValues();
@@ -99,6 +109,7 @@ public class DataList extends ArrayList<DataPoint> {
 
         try (OutputStream outputStream = resolver.openOutputStream(csvUri)) {
             if (outputStream != null) {
+                outputStream.write((gson.toJson(device) + "\n").getBytes());
                 outputStream.write(("time,radiation[CPS]\n").getBytes());
                 for (DataPoint point : this) {
                     outputStream.write((point.timestamp + "," + point.radiationLevel + "\n").getBytes());
@@ -152,6 +163,21 @@ public class DataList extends ArrayList<DataPoint> {
         }
     }
     public float getConversionFactor() {
-        return conversionFactor;
+        return device.conversionValue;
+    }
+
+    public Device getDevice() {
+        return device;
+    }
+
+    public Datalog getDatalog() {
+        return datalog;
+    }
+
+    public void setDatalogId(long datalogId)
+    {
+        for (DataPoint entry : this) {
+            entry.datalogId = datalogId;
+        }
     }
 }

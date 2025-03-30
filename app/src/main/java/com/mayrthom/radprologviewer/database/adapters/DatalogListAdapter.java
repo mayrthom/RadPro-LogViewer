@@ -6,10 +6,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.lifecycle.LifecycleOwner;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
+import com.mayrthom.radprologviewer.database.device.Device;
 import com.mayrthom.radprologviewer.DataList;
 import com.mayrthom.radprologviewer.database.datalog.Datalog;
 import com.mayrthom.radprologviewer.R;
@@ -21,16 +20,12 @@ import java.util.List;
 import java.util.Locale;
 
 public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.DatalogViewHolder> {
-    private final List<Datalog> datalogList;
+    private final List<DataList> datalogList;
     private OnItemClickListener listener;
     private OnDeleteClickListener deleteListener;
     private OnExportClickListener exportListener;
-    private final LifecycleOwner lifecycleOwner;
-    private final SharedViewModel viewModel;
 
-    public DatalogListAdapter(SharedViewModel viewModel, LifecycleOwner lifecycleOwner) {
-        this.viewModel = viewModel;
-        this.lifecycleOwner = lifecycleOwner;
+    public DatalogListAdapter() {
         datalogList = new ArrayList<>();
     }
 
@@ -38,10 +33,10 @@ public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.
         void onItemClick(DataList dataList);
     }
     public interface OnDeleteClickListener {
-        void onDeleteClick(Datalog datalog);
+        void onDeleteClick(DataList dataList);
     }
     public interface OnExportClickListener {
-        void onExportClick(DataList dataList, Datalog datalog);
+        void onExportClick(DataList dataList);
     }
 
     @NonNull
@@ -53,35 +48,25 @@ public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull DatalogViewHolder holder, int position) {
-        Datalog datalog = datalogList.get(position); //get datalog
+        DataList dataList = datalogList.get(position); //get datalog
+        if (dataList == null) return;
+        Datalog datalog = dataList.getDatalog();
+        Device device = dataList.getDevice();
+        //set text for item
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm", Locale.US);
+        holder.textViewDownloadDate.setText("Download Date: " + dateFormat.format(datalog.downloadDate));
+        holder.textViewDateRange.setText("Date Range: " + dateFormat.format(new Date(dataList.getStartPoint() * 1000)) + " - " + dateFormat.format(new Date(dataList.getEndPoint() * 1000)));
+        holder.textViewModelName.setText(device.toString());
 
-        // get the dataPoints for the datalog
-        viewModel.getDataPointsForDatalog(datalog.datalogId).removeObservers(lifecycleOwner);
-        viewModel.getDataPointsForDatalog(datalog.datalogId).observe(lifecycleOwner, dataPoints -> {
-            if (dataPoints == null) return;
-            // get the DeviceInfo for the downloaded Datalog
-            viewModel.getDeviceById(datalog.deviceId).removeObservers(lifecycleOwner);
-            viewModel.getDeviceById(datalog.deviceId).observe(lifecycleOwner, device -> {
-                if (device == null) return;
-                DataList dataList = new DataList(dataPoints, device.conversionValue);
-
-                //set text for item
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm", Locale.US);
-                holder.textViewDownloadDate.setText("Download Date: " + dateFormat.format(datalog.downloadDate));
-                holder.textViewDateRange.setText("Date Range: " + dateFormat.format(new Date(dataList.getStartPoint() * 1000)) + " - " + dateFormat.format(new Date(dataList.getEndPoint() * 1000)));
-                holder.textViewModelName.setText(device.toString());
-
-                //setup listeners
-                holder.itemView.setOnClickListener(v -> {
-                    if (listener != null) listener.onItemClick(dataList);
-                    });
-                holder.buttonDelete.setOnClickListener(v -> {
-                    if (deleteListener != null) deleteListener.onDeleteClick(datalog);
-                    });
-                holder.buttonExport.setOnClickListener(v -> {
-                    if (exportListener != null) exportListener.onExportClick(dataList,datalog);
-                  });
-               });
+        //setup listeners
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onItemClick(dataList);
+            });
+        holder.buttonDelete.setOnClickListener(v -> {
+            if (deleteListener != null) deleteListener.onDeleteClick(dataList);
+            });
+        holder.buttonExport.setOnClickListener(v -> {
+            if (exportListener != null) exportListener.onExportClick(dataList);
           });
     }
 
@@ -100,9 +85,9 @@ public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    public void updateDatalogs(List<Datalog> newList) {
+    public void update(List<DataList> dataLists) {
         this.datalogList.clear();
-        this.datalogList.addAll(newList);
+        this.datalogList.addAll(dataLists);
         notifyDataSetChanged();
     }
 

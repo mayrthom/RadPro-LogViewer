@@ -19,12 +19,12 @@ public interface DeviceDao {
     @Query("SELECT * FROM Device")
     LiveData<List<Device>> getAllDevices();
 
-    @Query("SELECT deviceId FROM Device WHERE serialNumber = :serialNumber LIMIT 1")
-    long getDeviceIdBySerial(String serialNumber);
-
     @Query("SELECT * FROM Device WHERE deviceId = :deviceId LIMIT 1")
     LiveData<Device> getDeviceById(long deviceId);
 
     @Update
     void updateDevice(Device device);
+
+    @Query("SELECT EXISTS(SELECT 1 FROM Device WHERE deviceId = :deviceId)")
+    boolean exists(long deviceId);
 }

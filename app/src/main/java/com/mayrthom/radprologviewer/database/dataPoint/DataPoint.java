@@ -7,8 +7,7 @@ import androidx.room.PrimaryKey;
 
 import com.mayrthom.radprologviewer.database.datalog.Datalog;
 
-@Entity(foreignKeys = @ForeignKey(
-        entity = Datalog.class,
+@Entity(foreignKeys = @ForeignKey(entity = Datalog.class,
         parentColumns = "datalogId",
         childColumns = "datalogId",
         onDelete = ForeignKey.CASCADE

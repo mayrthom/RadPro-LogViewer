@@ -117,9 +117,6 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         super.onPause();
     }
 
-    /*
-     * UI
-     */
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_view_device, container, false);
@@ -134,8 +131,8 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         enableButtons(false);
 
         viewBtn.setOnClickListener(v ->{
-                enableButtons(false);
-                viewData(false);
+            enableButtons(false);
+            viewData(false);
         });
 
         loadBtn.setOnClickListener(v ->{
@@ -147,25 +144,25 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
 
     private void connect() {
         try {
-        UsbDevice device = null;
-        UsbManager usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
-        for(UsbDevice v : usbManager.getDeviceList().values())
-            if(v.getDeviceId() == deviceId)
-                device = v;
-        if(device == null) {
-            enableButtons(false);
-            statusText.setText("connection failed: device not found");
-            return;
-        }
-        UsbSerialDriver driver = UsbSerialProber.getDefaultProber().probeDevice(device);
-        if(driver == null) {
-            statusText.setText( "connection failed: no driver for device");
-            return;
-        }
-        if(driver.getPorts().size() < portNum) {
-            statusText.setText("connection failed: not enough ports at device");
-            return;
-        }
+            UsbDevice device = null;
+            UsbManager usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
+            for(UsbDevice v : usbManager.getDeviceList().values())
+                if(v.getDeviceId() == deviceId)
+                    device = v;
+            if(device == null) {
+                enableButtons(false);
+                statusText.setText("connection failed: device not found");
+                return;
+            }
+            UsbSerialDriver driver = UsbSerialProber.getDefaultProber().probeDevice(device);
+            if(driver == null) {
+                statusText.setText( "connection failed: no driver for device");
+                return;
+            }
+            if(driver.getPorts().size() < portNum) {
+                statusText.setText("connection failed: not enough ports at device");
+                return;
+            }
             usbSerialPort = driver.getPorts().get(portNum);
             UsbDeviceConnection usbConnection = usbManager.openDevice(driver.getDevice());
             if (usbConnection == null && usbPermission == UsbPermission.Unknown && !usbManager.hasPermission(driver.getDevice())) {
@@ -189,7 +186,8 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             usbSerialPort.open(usbConnection);
             try{
                 usbSerialPort.setParameters(BAUD_RATE, 8, 1, UsbSerialPort.PARITY_NONE);
-            }catch (UnsupportedOperationException e){
+            }
+            catch (UnsupportedOperationException e){
                 statusText.setText(e.getMessage());
             }
             statusText.setText("connected");
@@ -232,19 +230,17 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
     private String readData() throws IOException {
         try {
             int len=1;
+            byte[] buffer = new byte[50000];
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             while (len != 0){
-                byte[] buffer = new byte[8192];
                 len = usbSerialPort.read(buffer, READ_WAIT_MILLIS);
                 out.write(buffer, 0, len);
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 return out.toString(StandardCharsets.UTF_8); //only supported in SDK 33
-            }
             else
-            {
                 return new String(out.toByteArray(),StandardCharsets.UTF_8); // for older android versions
-            }
+
         } catch (IOException e) {
             // when using read with timeout, USB bulkTransfer returns -1 on timeout _and_ errors
             // like connection loss, so there is typically no exception thrown here on error
@@ -254,19 +250,20 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
     }
 
     private Device getDeviceInfo() throws Exception {
-        send("GET tubeConversionFactor");
+        send("GET tubeSensitivity"); //new command
         String s = readData();
+        if (s.contains("ERROR")) {
+            send("GET tubeConversionFactor"); //old command
+            s = readData();
+        }
         s = s.replace("OK ", "");
         float conversionFactor = Float.parseFloat(s);
-
         send("GET deviceId");
         s = readData();
-
         return new Device(s, conversionFactor);
     }
 
-    private void printDeviceId()
-    {
+    private void printDeviceId() {
         try {
             device = getDeviceInfo();
             statusText.setText("Connected");
@@ -279,42 +276,34 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         }
     }
     //Load Data from Device
-    private void viewData(boolean save)
-    {
+    private void viewData(boolean save) {
         statusText.setText("Loading!\n(May take a while)");
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             try {
-                    String s;
-                    send("GET datalog");
-                    s = readData();
+                send("GET datalog");
+                String receivedData = readData();
+                DataList dataList = new DataList(receivedData,device);
+                if (save && !dataList.isEmpty())
+                    sharedViewModel.addDatalogWithEntries(dataList);
 
-                    DataList dl = new DataList(s,device.conversionValue);
-                    if (save && !dl.isEmpty())
-                        sharedViewModel.addDatalogWithEntries(device,dl);
-
-                    new Handler(Looper.getMainLooper()).post(() -> switchFragment(dl));
-                }
-                catch (Exception e)
-                    {
-                        statusText.setText("Error: " + e.getMessage());
-                    }
-            });
+                new Handler(Looper.getMainLooper()).post(() -> switchFragment(dataList));
+            }
+            catch (Exception e) {
+                statusText.setText("Error: " + e.getMessage());
+            }
+        });
         executor.shutdown();
     }
 
     private void switchFragment(DataList d) {
-        SharedViewModel sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
         sharedViewModel.setDataList(d);
         androidx.fragment.app.Fragment fragment = new PlotFragment();
-        FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.fragment_container, fragment);
-        transaction.addToBackStack(null);
+        FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).addToBackStack(null);
         transaction.commit();
     }
 
-    private void enableButtons(boolean b)
-    {
+    private void enableButtons(boolean b) {
         viewBtn.setEnabled(b);
         loadBtn.setEnabled(b);
     }

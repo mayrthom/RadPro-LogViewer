@@ -13,6 +13,10 @@
         android:title="Stored Device" />
 
     <item
+        android:id="@+id/nav_import"
+        android:title="Import CSV" />
+
+    <item
         android:id="@+id/nav_info"
         android:title="Info" />
 

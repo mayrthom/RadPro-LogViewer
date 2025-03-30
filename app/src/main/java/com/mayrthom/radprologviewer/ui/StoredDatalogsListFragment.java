@@ -21,7 +21,6 @@ import com.mayrthom.radprologviewer.R;
 import com.mayrthom.radprologviewer.database.adapters.DatalogListAdapter;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
 import com.mayrthom.radprologviewer.DataList;
-import com.mayrthom.radprologviewer.database.datalog.Datalog;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModelFactory;
 
 import java.text.SimpleDateFormat;
@@ -50,24 +49,22 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
         emptyText.setTextSize(18);
 
         // Set up Adapter
-        adapter = new DatalogListAdapter(sharedViewModel, getViewLifecycleOwner());
+        adapter = new DatalogListAdapter();
         adapter.setOnItemClickListener(dataList -> switchFragment(dataList));
         adapter.setOnDeleteClickListener(datalog -> {
             Executors.newSingleThreadExecutor().execute(() -> {
                 getActivity().runOnUiThread(() -> showDeleteConfirmationDialog(datalog));
             });
         });
-        adapter.setOnExportClickListener((dataList, datalog) -> showExportConfirmationDialog(dataList,datalog));
+        adapter.setOnExportClickListener((dataList) -> showExportConfirmationDialog(dataList));
 
         //update Dataloglist
-        sharedViewModel.getAllDatalogs().observe(getViewLifecycleOwner(), datalogList -> {
-            if (datalogList != null ) {
-                adapter.updateDatalogs(datalogList);
-                if(datalogList.isEmpty())
-                    emptyText.setVisibility(View.VISIBLE);
-                else
-                    emptyText.setVisibility(View.INVISIBLE);
-            }
+        sharedViewModel.getAllDatalogs().observe(getViewLifecycleOwner(), dataLists -> {
+            if (dataLists == null || dataLists.isEmpty())
+                emptyText.setVisibility(View.VISIBLE);
+            else
+                emptyText.setVisibility(View.INVISIBLE);
+            adapter.update(dataLists);
         });
         recyclerView.setAdapter(adapter);
         return view;
@@ -87,14 +84,14 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
     }
 
     /* Show confirmation dialog if the datalog should be really deleted */
-    private void showDeleteConfirmationDialog(Datalog datalog) {
+    private void showDeleteConfirmationDialog(DataList dataList) {
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Delete")
                 .setMessage("Really want to delete datalog?")
                 .setPositiveButton("Delete", (dialog, which) ->
                 {
                     Executors.newSingleThreadExecutor().execute(() -> {
-                        sharedViewModel.deleteDatalogWithPoints(datalog);
+                        sharedViewModel.deleteDatalogWithPoints(dataList.getDatalog());
                     });
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
@@ -102,22 +99,18 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
     }
 
     /* Show confirmation dialog if the datalog should be really exported as csv */
-    private void showExportConfirmationDialog(DataList dataList, Datalog datalog) {
+    private void showExportConfirmationDialog(DataList dataList) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
-        String fileName = "datalog_" + simpleDateFormat.format(datalog.downloadDate);
+        String fileName = "0x" + Long.toHexString(dataList.getDevice().deviceId) + "_" + simpleDateFormat.format(dataList.getDatalog().downloadDate);
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Export")
                 .setMessage("Export to:\n\"Downloads/\u200B" + fileName + ".csv\"?")
                 .setPositiveButton("Export", (dialog, which) ->
                 {
                     if(dataList.exportCsv(this.requireContext(), fileName))
-                    {
                         Toast.makeText(getActivity(), "stored successful", Toast.LENGTH_LONG).show();
-                    }
                     else
-                    {
                         Toast.makeText(getActivity(), "Error!", Toast.LENGTH_LONG).show();
-                    }
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                 .show();
@@ -125,9 +118,7 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
     private void switchFragment(DataList d) {
         sharedViewModel.setDataList(d);
         androidx.fragment.app.Fragment fragment = new PlotFragment();
-        FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.fragment_container, fragment);
-        transaction.addToBackStack(null);
+        FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).addToBackStack(null);
         transaction.commit();
     }
 }

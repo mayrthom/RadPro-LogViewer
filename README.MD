@@ -1,14 +1,14 @@
 # RadPro Log-Viewer
 
-This android app displays and stores the logged data of Geiger counters with the [Radpro Firmware](https://github.com/Gissio/radpro).
+This android app displays and stores the logged data of geigercounters with the [Radpro Firmware](https://github.com/Gissio/radpro).
 
 ## Features
 - Load logged data from Geiger counter.
 - Plot logged data.
 - Store logged data locally on the android device.
-- Combine data from multiple logs of the same Geiger counters and display them in one chart, to get a complete radiation profile of one Geiger counter.
+- Combine data from multiple logs of the same device and display them in one chart, to get a longer radiation profile
 - Adaptive moving average filter with variable filter window, so the radiation plot can be smoothed.
-- Export .csv files of logged data in the format "timestamp[unix time],radiation[CPS]"
+- Export .csv files of logged data in the format "Timestamp[unix time],radiation[CPS]"
 - The app also has a dark mode, which is set according to the current system mode.
 
 Each datalog is stored on the Android device along with information about the Geiger counter it was loaded from. This allows to store data from multiple Geiger counters.
@@ -28,9 +28,9 @@ The app uses the following libraries:
 - Room - for storing downloaded datalogs persistently
 ## Screenshots
 The peak in the diagram was produced with a check source, to check if it is working correctly.  
-<img src="screenshots/screenshot2.jpeg" width="250"> <img src="screenshots/screenshot3.jpeg" width="250"> <img src="screenshots/screenshot4.jpeg" width="250">
+<img src="screenshots/screenshot2.jpeg" height="600"> <img src="screenshots/screenshot3.jpeg" height="600"> <img src="screenshots/screenshot4.jpeg" height="600">
 
-<img src="screenshots/screenshot1.jpeg" width="750">  
+<img src="screenshots/screenshot1.jpeg" >  
 
 
 ## Personal Motivation
