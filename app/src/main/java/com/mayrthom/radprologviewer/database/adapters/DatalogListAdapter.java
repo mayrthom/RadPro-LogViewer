@@ -13,11 +13,12 @@ import com.mayrthom.radprologviewer.DataList;
 import com.mayrthom.radprologviewer.database.datalog.Datalog;
 import com.mayrthom.radprologviewer.R;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.DatalogViewHolder> {
     private final List<DataList> datalogList;
@@ -52,10 +53,17 @@ public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.
         if (dataList == null) return;
         Datalog datalog = dataList.getDatalog();
         Device device = dataList.getDevice();
+
+        //format the time according to the timezone on the android device
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        final ZoneId zoneId = ZoneId.systemDefault();
+        ZonedDateTime zonedStartTime = Instant.ofEpochSecond(dataList.getStartPoint()).atZone(zoneId);
+        ZonedDateTime zonedEndTime = Instant.ofEpochSecond(dataList.getEndPoint()).atZone(zoneId);
+        ZonedDateTime zonedDownloadDate =Instant.ofEpochMilli(datalog.downloadDate).atZone(zoneId);
+
         //set text for item
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm", Locale.US);
-        holder.textViewDownloadDate.setText("Download Date: " + dateFormat.format(datalog.downloadDate));
-        holder.textViewDateRange.setText("Date Range: " + dateFormat.format(new Date(dataList.getStartPoint() * 1000)) + " - " + dateFormat.format(new Date(dataList.getEndPoint() * 1000)));
+        holder.textViewDownloadDate.setText("Download Date: " + zonedDownloadDate.format(formatter));
+        holder.textViewDateRange.setText("Date Range: " + zonedStartTime.format(formatter) + " - " + zonedEndTime.format(formatter));
         holder.textViewModelName.setText(device.toString());
 
         //setup listeners

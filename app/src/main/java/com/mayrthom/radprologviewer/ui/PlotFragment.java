@@ -34,8 +34,10 @@ import com.mayrthom.radprologviewer.R;
 import com.mayrthom.radprologviewer.DataList;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -225,11 +227,12 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
             /* Format the time Axis*/
             XAxis xAxis = chart.getXAxis();
             xAxis.setValueFormatter(new ValueFormatter() {
-                private final SimpleDateFormat mFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US);
+                final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                final ZoneId zoneId = ZoneId.systemDefault();
                 @Override
                 public String getFormattedValue(float value) {
-                    Date date = new Date( ( (long) value + dataList.getStartPoint())*1000);
-                    return mFormat.format(date);
+                    ZonedDateTime zonedDateTime = Instant.ofEpochSecond(( (long) value + dataList.getStartPoint())).atZone(zoneId);
+                    return zonedDateTime.format(formatter);
                 }
             });
 

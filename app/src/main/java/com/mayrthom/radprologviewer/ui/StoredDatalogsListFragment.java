@@ -23,8 +23,10 @@ import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
 import com.mayrthom.radprologviewer.DataList;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModelFactory;
 
-import java.text.SimpleDateFormat;
-import java.util.Locale;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Executors;
 
 public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
@@ -100,8 +102,9 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
 
     /* Show confirmation dialog if the datalog should be really exported as csv */
     private void showExportConfirmationDialog(DataList dataList) {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
-        String fileName = "0x" + Long.toHexString(dataList.getDevice().deviceId) + "_" + simpleDateFormat.format(dataList.getDatalog().downloadDate);
+        ZonedDateTime zonedDownloadDate =Instant.ofEpochMilli(dataList.getDatalog().downloadDate).atZone(ZoneOffset.UTC);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm'Z'");
+        String fileName = "0x" + Long.toHexString(dataList.getDevice().deviceId) + "_" + zonedDownloadDate.format(formatter);
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Export")
                 .setMessage("Export to:\n\"Downloads/\u200B" + fileName + ".csv\"?")
