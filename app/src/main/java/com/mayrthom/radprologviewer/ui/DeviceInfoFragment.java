@@ -1,5 +1,6 @@
 package com.mayrthom.radprologviewer.ui;
 
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -41,6 +42,10 @@ import com.mayrthom.radprologviewer.viewModel.SharedViewModelFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,6 +67,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
     private UsbPermission usbPermission = UsbPermission.Unknown;
     private boolean connected = false;
     private SharedViewModel sharedViewModel;
+    private AlertDialog alertDialog;
 
     public DeviceInfoFragment() {
         broadcastReceiver = new BroadcastReceiver() {
@@ -105,8 +111,10 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             @Override
             public void handleOnBackPressed() {
                 getParentFragmentManager().popBackStack();}});
-        if(!connected && (usbPermission == UsbPermission.Unknown || usbPermission == UsbPermission.Granted))
+        if(!connected && (usbPermission == UsbPermission.Unknown || usbPermission == UsbPermission.Granted)) {
+            resetViews();
             mainLooper.post(this::connect);
+        }
     }
 
     @Override
@@ -132,12 +140,12 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
 
         viewBtn.setOnClickListener(v ->{
             enableButtons(false);
-            viewData(false);
+            readAndViewData(false);
         });
 
         loadBtn.setOnClickListener(v ->{
             enableButtons(false);
-            viewData(true);
+            readAndViewData(true);
         });
         return view;
     }
@@ -190,11 +198,12 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             catch (UnsupportedOperationException e){
                 statusText.setText(e.getMessage());
             }
-            statusText.setText("connected");
-            enableButtons(true);
 
             connected = true;
+            statusText.setText("connected!");
             printDeviceId();
+            checkTimeDiff(61); //Check if Time on Geiger counter is the same as on the android device
+
         } catch (Exception e) {
             statusText.setText( "Error: " + e.getMessage());
             disconnect();
@@ -216,7 +225,6 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
 
     private void send(String str) {
         if(!connected) {
-            Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
@@ -249,6 +257,17 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         }
     }
 
+    private void printDeviceId() {
+        try {
+            device = getDeviceInfo();
+            deviceIdText.setText(device.toString());
+        }
+        catch (Exception e) {
+            enableButtons(false);
+            statusText.setText("Error: " + e.getMessage());
+        }
+    }
+
     private Device getDeviceInfo() throws Exception {
         send("GET tubeSensitivity"); //new command
         String s = readData();
@@ -263,20 +282,74 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         return new Device(s, conversionFactor);
     }
 
-    private void printDeviceId() {
-        try {
-            device = getDeviceInfo();
-            statusText.setText("Connected");
-            deviceIdText.setText(device.toString());
+    private void checkTimeDiff(long maxDiff) throws Exception {
+        send("GET deviceTime");
+        String s = readData();
+        ZoneId zoneId = ZoneId.systemDefault();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        long deviceTime = Long.parseLong(s.replaceAll("OK|\\r|\\n|\\s", ""));
+        long androidTime = Instant.now().getEpochSecond();
+        long diff = deviceTime-androidTime; //Difference between time of android device and Geiger counter
+        if (diff > maxDiff || diff < -1 * maxDiff) {
+            String androidTimeString = Instant.ofEpochSecond(androidTime).atZone(zoneId).format(formatter);
+            String deviceTimeString = Instant.ofEpochSecond(deviceTime).atZone(zoneId).format(formatter);
+            getActivity().runOnUiThread(() -> showSyncConfirmationDialog(androidTimeString,deviceTimeString));
         }
-        catch (Exception e)
-        {
-            enableButtons(false);
-            statusText.setText("Error: " + e.getMessage());
-        }
+        else
+            enableButtons(true);
     }
+
+    private void showSyncConfirmationDialog(String androidTime, String deviceTime) {
+        alertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
+                .setTitle("Time Mismatch Detected!")
+                .setMessage("Clock on Geiger counter is not synchronized with the Android device.\n\n" +
+                        "Android time: " + androidTime +
+                        "\nDevice time: " + deviceTime +
+                        "\n\nWould you like to update the time on the Geiger counter?")
+                .setPositiveButton("Sync", (dialog, which) -> syncTime())
+                .setNegativeButton("Dismiss ", (dialog, which) -> enableButtons(true))
+                .setOnCancelListener(d -> enableButtons(true))
+                .show();
+    }
+
+    //Set time of the Geiger counter to the time of the android device
+    private void syncTime() {
+        statusText.setText("Syncronizing time");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            try {
+                send("SET deviceTime " + Instant.now().getEpochSecond());
+                String response = readData();
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    if(response.contains("OK"))
+                        showSyncResultDialog();
+                    else
+                        Toast.makeText(requireContext(), "time synchronized failed!", Toast.LENGTH_SHORT).show();
+
+                    enableButtons(true);
+                    statusText.setText("connected!");
+                });
+            }
+            catch (Exception e) {
+                statusText.setText("Error: " + e.getMessage());
+            }
+        });
+        executor.shutdown();
+    }
+
+    private void showSyncResultDialog() {
+        ZoneOffset offset = ZoneId.systemDefault().getRules().getOffset(Instant.now());
+        alertDialog = new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
+                .setTitle("Time Sync Successful!")
+                .setMessage("If the hour on the Geiger counter is incorrect, please check time zone.\n\n" +
+                        "The time zone must be set manually on the Geiger counter.\n\n" +
+                        "Correct time zone: UTC" + offset)
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
     //Load Data from Device
-    private void viewData(boolean save) {
+    private void readAndViewData(boolean save) {
         statusText.setText("Loading!\n(May take a while)");
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
@@ -286,7 +359,6 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
                 DataList dataList = new DataList(receivedData,device);
                 if (save && !dataList.isEmpty())
                     sharedViewModel.addDatalogWithEntries(dataList);
-
                 new Handler(Looper.getMainLooper()).post(() -> switchFragment(dataList));
             }
             catch (Exception e) {
@@ -295,6 +367,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         });
         executor.shutdown();
     }
+
 
     private void switchFragment(DataList d) {
         sharedViewModel.setDataList(d);
@@ -306,6 +379,15 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
     private void enableButtons(boolean b) {
         viewBtn.setEnabled(b);
         loadBtn.setEnabled(b);
+    }
+
+    void resetViews() {
+        if (alertDialog != null && alertDialog.isShowing()) {
+            alertDialog.dismiss(); //quit dialog
+        }
+        statusText.setText("Not Connected\nConnecting...");
+        deviceIdText.setText("???\n");
+        enableButtons(false);
     }
 
 }

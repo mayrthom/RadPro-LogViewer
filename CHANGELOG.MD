@@ -1,8 +1,16 @@
 # Changelog
 
+## [0.4.0] - 2025-04-02
+### Added
+- Check whether the internal time of the Geiger counter is synchronized with the Android device time.
+- Option to synchronize the clock of the Geiger counter with the Android device time.
+
+### Note
+- It's important that the time of the Geiger counter is set correctly to ensure accurate datalog storage.
+
 ## [0.3.1] - 2025-04-01
 ### Changed
-Local time formatting on Android now respects the system timezone setting (the timezone on the Geiger counter must be set correctly to ensure the time is displayed correctly)
+- Changed from java.util.Date to the newer java.time
 
 ## [0.3.0] - 2025-03-30
 ### Added
