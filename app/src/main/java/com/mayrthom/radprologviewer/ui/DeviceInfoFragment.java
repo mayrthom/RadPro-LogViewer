@@ -199,7 +199,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             catch (UnsupportedOperationException e){
                 statusText.setText(e.getMessage());
             }
-            readData(); //clear buffer
+            readData(1000); //clear buffer
             connected = true;
             statusText.setText("connected!");
             printDeviceId();
@@ -236,13 +236,13 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         }
     }
 
-    private String readData() throws IOException {
+    private String readData(int timeout) throws IOException {
         try {
             int len=1;
             byte[] buffer = new byte[50000];
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             while (len != 0){
-                len = usbSerialPort.read(buffer, READ_WAIT_MILLIS);
+                len = usbSerialPort.read(buffer, timeout);
                 out.write(buffer, 0, len);
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -271,21 +271,21 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
 
     private Device getDeviceInfo() throws Exception {
         send("GET tubeSensitivity"); //new command
-        String s = readData();
+        String s = readData(1000);
         if (s.contains("ERROR")) {
             send("GET tubeConversionFactor"); //old command
-            s = readData();
+            s = readData(1000);
         }
         s = s.replaceAll("OK|\\r|\\n|\\s", "");
         float conversionFactor = Float.parseFloat(s);
         send("GET deviceId");
-        s = readData();
+        s = readData(1000);
         return new Device(s, conversionFactor);
     }
 
     private void checkTimeDiff(long maxDiff) throws Exception {
         send("GET deviceTime");
-        String s = readData();
+        String s = readData(1000);
         ZoneId zoneId = ZoneId.systemDefault();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         long deviceTime = Long.parseLong(s.replaceAll("OK|\\r|\\n|\\s", ""));
@@ -320,7 +320,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         executor.execute(() -> {
             try {
                 send("SET deviceTime " + Instant.now().getEpochSecond());
-                String response = readData();
+                String response = readData(1000);
                 new Handler(Looper.getMainLooper()).post(() -> {
                     if(response.contains("OK"))
                         showSyncResultDialog();
@@ -356,7 +356,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         executor.execute(() -> {
             try {
                 send("GET datalog");
-                String receivedData = readData();
+                String receivedData = readData(2000);
                 DataList dataList = new DataList(receivedData,device);
                 if (save && !dataList.isEmpty())
                     sharedViewModel.addDatalogWithEntries(dataList);
