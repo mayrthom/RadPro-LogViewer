@@ -12,6 +12,15 @@ This Android app displays and stores the logged data of Geiger counters with the
 - Import `.csv` files (the file must follow the CSV format mentioned below).
 - The app also supports dark mode, which follows the current system setting.
 
+## Important Note
+The time on the Geiger counter must be set accurately according to UTC. It's important to first set the time zone, and only then set the date and time.
+
+The app will display a warning if there is a time mismatch greater than 2 minutes between the Geiger counter and the Android device. It can automatically synchronize the Geiger counter’s time with the Android device. However, the time zone must be set manually on the Geiger counter, based on the time zone displayed in the app.
+
+Important: Don’t forget to account for Daylight Saving Time (DST) when setting the time zone.  
+For example, in Vienna:  
+- Winter time is UTC+01:00
+- Summer time (DST) is UTC+02:00 
 ## CSV Format
 
 The first line contains device information in JSON format, the second line contains the column headers. For example:

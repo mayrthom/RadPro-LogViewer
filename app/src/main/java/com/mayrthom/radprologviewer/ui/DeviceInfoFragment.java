@@ -45,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -54,7 +55,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
     private enum UsbPermission { Unknown, Requested, Granted, Denied }
     private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
     private static final int WRITE_WAIT_MILLIS = 2000;
-    private static final int READ_WAIT_MILLIS = 2000;
+    private static final int READ_WAIT_MILLIS = 1000;
     private static final int BAUD_RATE = 115200;
     private int deviceId, portNum;
     private final BroadcastReceiver broadcastReceiver;
@@ -198,7 +199,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             catch (UnsupportedOperationException e){
                 statusText.setText(e.getMessage());
             }
-
+            readData(); //clear buffer
             connected = true;
             statusText.setText("connected!");
             printDeviceId();
@@ -275,7 +276,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             send("GET tubeConversionFactor"); //old command
             s = readData();
         }
-        s = s.replace("OK ", "");
+        s = s.replaceAll("OK|\\r|\\n|\\s", "");
         float conversionFactor = Float.parseFloat(s);
         send("GET deviceId");
         s = readData();
