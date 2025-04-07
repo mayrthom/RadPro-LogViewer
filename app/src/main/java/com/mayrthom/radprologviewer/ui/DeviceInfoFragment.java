@@ -45,10 +45,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 
 public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
 
@@ -199,9 +199,9 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             catch (UnsupportedOperationException e){
                 statusText.setText(e.getMessage());
             }
-            readData(1000); //clear buffer
             connected = true;
             statusText.setText("connected!");
+            clearInputBuffer(1000);
             printDeviceId();
             checkTimeDiff(61); //Check if Time on Geiger counter is the same as on the android device
 
@@ -235,38 +235,47 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             statusText.setText("Error: " + e.getMessage());
         }
     }
-
+    private void clearInputBuffer(int timeout) throws IOException {
+        try {
+            int len = 1;
+            byte[] buffer = new byte[usbSerialPort.getReadEndpoint().getMaxPacketSize()];
+            while (len != 0) {
+                len = usbSerialPort.read(buffer, timeout);
+            }
+        } catch (IOException e) {
+        disconnect();
+        throw new IOException(e);
+    }
+    }
     private String readData(int timeout) throws IOException {
         try {
-            int len=1;
-            byte[] buffer = new byte[50000];
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            while (len != 0){
-                len = usbSerialPort.read(buffer, timeout);
-                out.write(buffer, 0, len);
+            String result;
+            do {
+                int len = 1;
+                byte[] buffer = new byte[usbSerialPort.getReadEndpoint().getMaxPacketSize()];
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                while (len != 0) {
+                    len = usbSerialPort.read(buffer, timeout);
+                    out.write(buffer, 0, len);
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    result = out.toString(StandardCharsets.UTF_8); //only supported in SDK 33
+                else
+                    result = new String(out.toByteArray(), StandardCharsets.UTF_8); // for older android versions
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                return out.toString(StandardCharsets.UTF_8); //only supported in SDK 33
-            else
-                return new String(out.toByteArray(),StandardCharsets.UTF_8); // for older android versions
+            while (result.isBlank()); // load again if the result of the first attempt is empty
+            return result.split("\n")[0]; //only interested in the first line
 
         } catch (IOException e) {
-            // when using read with timeout, USB bulkTransfer returns -1 on timeout _and_ errors
-            // like connection loss, so there is typically no exception thrown here on error
             disconnect();
             throw new IOException(e);
         }
     }
 
-    private void printDeviceId() {
-        try {
+    private void printDeviceId() throws Exception{
+
             device = getDeviceInfo();
             deviceIdText.setText(device.toString());
-        }
-        catch (Exception e) {
-            enableButtons(false);
-            statusText.setText("Error: " + e.getMessage());
-        }
     }
 
     private Device getDeviceInfo() throws Exception {
@@ -276,7 +285,9 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             send("GET tubeConversionFactor"); //old command
             s = readData(1000);
         }
-        s = s.replaceAll("OK|\\r|\\n|\\s", "");
+
+        s = s.replaceAll("OK ", "");
+        s= s.replaceAll("[^0-9.\\-]", "");
         float conversionFactor = Float.parseFloat(s);
         send("GET deviceId");
         s = readData(1000);
@@ -286,9 +297,11 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
     private void checkTimeDiff(long maxDiff) throws Exception {
         send("GET deviceTime");
         String s = readData(1000);
+        s = s.replaceAll("OK ", "");
+        s= s.replaceAll("[^0-9.\\-]", "");
         ZoneId zoneId = ZoneId.systemDefault();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        long deviceTime = Long.parseLong(s.replaceAll("OK|\\r|\\n|\\s", ""));
+        long deviceTime = Long.parseLong(s);
         long androidTime = Instant.now().getEpochSecond();
         long diff = deviceTime-androidTime; //Difference between time of android device and Geiger counter
         if (diff > maxDiff || diff < -1 * maxDiff) {
@@ -362,8 +375,8 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
                     sharedViewModel.addDatalogWithEntries(dataList);
                 new Handler(Looper.getMainLooper()).post(() -> switchFragment(dataList));
             }
-            catch (Exception e) {
-                statusText.setText("Error: " + e.getMessage());
+            catch (IOException e) {
+                new Handler(Looper.getMainLooper()).post(() -> { statusText.setText("Error: " + e.getMessage());});
             }
         });
         executor.shutdown();
