@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.1] - 2025-04-08
+### Added
+- Display stays on while reading the datalog
+### Fixed
+- Resolved problem with read buffer size
+
+## [0.5.0] - 2025-04-07
+### Fixed
+- Resolved compatibility issues with FNIRSI GC-01/JOY-IT JT-RAD01.
+
+
 ## [0.4.0] - 2025-04-02
 ### Added
 - Check whether the internal time of the Geiger counter is synchronized with the Android device time.

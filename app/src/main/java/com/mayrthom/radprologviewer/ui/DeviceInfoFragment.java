@@ -17,6 +17,7 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -123,6 +124,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
         if(connected) {
             disconnect();
         }
+        requireActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         super.onPause();
     }
 
@@ -252,10 +254,11 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
             String result;
             do {
                 int len = 1;
-                byte[] buffer = new byte[usbSerialPort.getReadEndpoint().getMaxPacketSize()];
+                int bufferSize = 10* usbSerialPort.getReadEndpoint().getMaxPacketSize();
+                byte[] buffer = new byte[bufferSize+1];
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 while (len != 0) {
-                    len = usbSerialPort.read(buffer, timeout);
+                    len = usbSerialPort.read(buffer,bufferSize, timeout);
                     out.write(buffer, 0, len);
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -365,6 +368,7 @@ public class DeviceInfoFragment extends androidx.fragment.app.Fragment {
     //Load Data from Device
     private void readAndViewData(boolean save) {
         statusText.setText("Loading!\n(May take a while)");
+        requireActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             try {
