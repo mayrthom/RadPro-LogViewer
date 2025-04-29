@@ -5,6 +5,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
 
+
 import java.util.List;
 
 @Dao
@@ -15,6 +16,7 @@ public interface DataPointDao {
     @Query("SELECT * FROM DataPoint WHERE datalogId = :datalogId")
     LiveData<List<DataPoint>> getDataPointsForDatalog(long datalogId);
 
-    @Query("SELECT DISTINCT dp.* FROM DataPoint dp JOIN Datalog dl ON dp.datalogId = dl.datalogId WHERE dl.deviceId = :deviceId ORDER BY dp.timestamp ASC")
+    @Query("SELECT dp.* FROM DataPoint dp JOIN Datalog dl ON dp.datalogId = dl.datalogId WHERE dl.datalog_device_id = :deviceId GROUP BY dp.timestamp ORDER BY dp.timestamp ASC")
         LiveData<List<DataPoint>> getDataPointsForDevice(long deviceId);
+
 }

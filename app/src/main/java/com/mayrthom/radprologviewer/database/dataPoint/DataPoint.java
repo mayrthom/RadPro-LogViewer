@@ -15,9 +15,11 @@ import com.mayrthom.radprologviewer.database.datalog.Datalog;
 public class DataPoint {
     @PrimaryKey(autoGenerate = true)
     public long dataPointId;
-    @ColumnInfo(name = "datalogId", index = true)
+
+    @ColumnInfo(index = true)
     public long datalogId;
     public final float radiationLevel;
+    @ColumnInfo(index = true)
     public final long timestamp;
 
     public DataPoint(long datalogId, float radiationLevel, long timestamp) {

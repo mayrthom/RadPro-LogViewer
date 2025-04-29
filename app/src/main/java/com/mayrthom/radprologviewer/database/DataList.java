@@ -1,4 +1,4 @@
-package com.mayrthom.radprologviewer;
+package com.mayrthom.radprologviewer.database;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -10,9 +10,9 @@ import android.provider.MediaStore;
 
 import com.github.mikephil.charting.data.Entry;
 import com.google.gson.Gson;
-import com.mayrthom.radprologviewer.database.dataPoint.DataPoint;
-import com.mayrthom.radprologviewer.database.datalog.Datalog;
 import com.mayrthom.radprologviewer.database.device.Device;
+import com.mayrthom.radprologviewer.utils.MovingAverageFilter;
+import com.mayrthom.radprologviewer.database.dataPoint.DataPoint;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,9 +29,7 @@ import java.util.stream.IntStream;
  */
 public class DataList extends ArrayList<DataPoint> {
 
-    //private float conversionFactor = 0;
     private Device device;
-    private Datalog datalog;
 
     public DataList (String csv, Device device)
     {
@@ -39,14 +37,6 @@ public class DataList extends ArrayList<DataPoint> {
         super.addAll(createDataPointList(csv));
         this.device = device;
     }
-
-    public DataList (List<DataPoint>l, Device device, Datalog datalog)
-    {
-        super(l);
-        this.device = device;
-        this.datalog = datalog;
-    }
-
 
     public DataList (List<DataPoint>l , Device device) {
         super(l);
@@ -79,6 +69,9 @@ public class DataList extends ArrayList<DataPoint> {
                     long v2 = values.get(i + 1)[1];
                     long time =  ((t2-t1))/2 + t1;
                     float radiation = ((float)(v2-v1) / (float)(t2-t1) ); //value in CPS
+                    if(radiation <0)
+                        return null;
+
                     return new DataPoint(0,radiation,time);
                 })
                 .filter(x -> x!= null)
@@ -131,13 +124,6 @@ public class DataList extends ArrayList<DataPoint> {
         return startpoint == null ? 0: startpoint.timestamp;
     }
 
-    public long getEndPoint() {
-        DataPoint startpoint = this.stream()
-                .max(Comparator.comparingLong(v -> v.timestamp))
-                .orElse(null);
-        return startpoint == null ? 0 : startpoint.timestamp;
-    }
-
     // Get the List in a useful form for the MPAndroidChart Library
     public List<Entry> getEntrySet()
     {
@@ -170,9 +156,6 @@ public class DataList extends ArrayList<DataPoint> {
         return device;
     }
 
-    public Datalog getDatalog() {
-        return datalog;
-    }
 
     public void setDatalogId(long datalogId)
     {

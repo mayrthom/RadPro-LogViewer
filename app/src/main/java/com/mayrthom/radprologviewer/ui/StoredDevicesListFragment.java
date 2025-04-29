@@ -2,9 +2,12 @@ package com.mayrthom.radprologviewer.ui;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,8 +21,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mayrthom.radprologviewer.R;
-import com.mayrthom.radprologviewer.DataList;
-import com.mayrthom.radprologviewer.database.adapters.DeviceListAdapter;
+import com.mayrthom.radprologviewer.database.DataList;
+import com.mayrthom.radprologviewer.ui.adapters.DeviceListAdapter;
 import com.mayrthom.radprologviewer.database.device.Device;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModelFactory;
@@ -38,6 +41,7 @@ public class StoredDevicesListFragment extends androidx.fragment.app.Fragment {
 
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        LinearLayout loadingContainer = view.findViewById(R.id.loadingContainer);
 
         SharedViewModelFactory factory = new SharedViewModelFactory(requireContext());
         sharedViewModel = new ViewModelProvider(requireActivity(), factory).get(SharedViewModel.class);
@@ -47,21 +51,31 @@ public class StoredDevicesListFragment extends androidx.fragment.app.Fragment {
         emptyText.setTextSize(18);
 
         adapter = new DeviceListAdapter();
-        adapter.setOnItemClickListener(dataList -> switchFragment(dataList));
+        adapter.setOnItemClickListener(device -> {
+            LoadingDialog dialog = new LoadingDialog(requireContext(),"Loading Data");
+            sharedViewModel.loadDataPointsForDevice(device.deviceId).observe(getViewLifecycleOwner(), dataPoints -> {
+                DataList dataList = new DataList(dataPoints, device);
+                switchFragment(dataList);
+                dialog.dismiss();
+            });
+        });
+
         adapter.setOnDeleteClickListener(device -> {
             Executors.newSingleThreadExecutor().execute(() -> {
                 getActivity().runOnUiThread(() -> showDeleteConfirmationDialog(device));
             });
         });
-        adapter.setOnExportClickListener(dataList -> showExportConfirmationDialog(dataList));
+        adapter.setOnExportClickListener(device -> showExportConfirmationDialog(device));
 
         //update List
-        sharedViewModel.getDataListForDevice().observe(getViewLifecycleOwner(), dataLists -> {
-            if (dataLists == null || dataLists.isEmpty())
+        loadingContainer.setVisibility(View.VISIBLE);
+        sharedViewModel.getAllDevices().observe(getViewLifecycleOwner(), devices -> {
+            loadingContainer.setVisibility(View.GONE);
+            if (devices == null || devices.isEmpty())
                 emptyText.setVisibility(View.VISIBLE);
             else
                 emptyText.setVisibility(View.INVISIBLE);
-            adapter.update(dataLists);
+            adapter.update(devices);
         });
         recyclerView.setAdapter(adapter);
         return view;
@@ -86,29 +100,43 @@ public class StoredDevicesListFragment extends androidx.fragment.app.Fragment {
                 .setTitle("Confirm Delete")
                 .setMessage("Really want to delete whole device?")
                 .setPositiveButton("Delete", (dialog, which) -> {
+                    LoadingDialog loadingDialog = new LoadingDialog(requireContext(),"Deleting Data");
                     Executors.newSingleThreadExecutor().execute(() -> {
                         sharedViewModel.deleteDeviceWithDatalogs(device);
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            Toast.makeText(getContext(), "Deleted!", Toast.LENGTH_SHORT).show();
+                            loadingDialog.dismiss();
+                        });
                     });
                 }).setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                 .show();
     }
 
     /* Show confirmation dialog if the datalog should be really exported as csv */
-    private void showExportConfirmationDialog(DataList dataList) {
-        String fileName = dataList.getDevice().deviceType + "_0x" + Long.toHexString(dataList.getDevice().deviceId);
+    private void showExportConfirmationDialog(Device device) {
+        String fileName = device.deviceType + "_0x" + Long.toHexString(device.deviceId);
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Export")
                 .setMessage("Export to:\n\"Downloads/\u200B" + fileName + ".csv\"?")
                 .setPositiveButton("Export", (dialog, which) -> {
-                    if(dataList.exportCsv(this.requireContext(), fileName))
-                        Toast.makeText(getActivity(), "Stored successful", Toast.LENGTH_LONG).show();
-                    else
-                        Toast.makeText(getActivity(), "Error!", Toast.LENGTH_LONG).show();
+                    LoadingDialog loadingDialog = new LoadingDialog(requireContext(),"Exporting Data");
+                    sharedViewModel.loadDataPointsForDevice(device.deviceId).observe(getViewLifecycleOwner(), dataPoints -> {
+                        Executors.newSingleThreadExecutor().execute(() -> {
+                            boolean success = new DataList(dataPoints, device).exportCsv(requireContext(), fileName);
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                if(success)
+                                    Toast.makeText(getContext(), "Export successful!", Toast.LENGTH_SHORT).show();
+                                else
+                                    Toast.makeText(getContext(), "Export failed!", Toast.LENGTH_SHORT).show();
+                                loadingDialog.dismiss();
+                            });
+                        });
+                    });
                 }).setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                 .show();
     }
-    private void switchFragment(DataList d) {
-        sharedViewModel.setDataList(d);
+    private void switchFragment(DataList dataList) {
+        sharedViewModel.setDataList(dataList);
         androidx.fragment.app.Fragment fragment = new PlotFragment();
         FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).addToBackStack(null);
         transaction.commit();

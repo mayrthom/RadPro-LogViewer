@@ -2,9 +2,12 @@ package com.mayrthom.radprologviewer.ui;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,14 +21,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mayrthom.radprologviewer.R;
-import com.mayrthom.radprologviewer.database.adapters.DatalogListAdapter;
+import com.mayrthom.radprologviewer.database.datalog.Datalog;
+import com.mayrthom.radprologviewer.database.datalog.DatalogWithTimestampsAndDevice;
+import com.mayrthom.radprologviewer.ui.adapters.DatalogListAdapter;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
-import com.mayrthom.radprologviewer.DataList;
+import com.mayrthom.radprologviewer.database.DataList;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModelFactory;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.Executors;
 
@@ -41,33 +45,40 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
         View view = inflater.inflate(R.layout.fragment_list, container, false);
 
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        LinearLayout loadingContainer = view.findViewById(R.id.loadingContainer);
 
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         SharedViewModelFactory factory = new SharedViewModelFactory(requireContext());
         sharedViewModel = new ViewModelProvider(requireActivity(), factory).get(SharedViewModel.class);
 
-        /* Show text if there are no datalogs stored */
         emptyText =  view.findViewById(R.id.emptyText);
         emptyText.setTextSize(18);
 
         // Set up Adapter
         adapter = new DatalogListAdapter();
-        adapter.setOnItemClickListener(dataList -> switchFragment(dataList));
-        adapter.setOnDeleteClickListener(datalog -> {
-            Executors.newSingleThreadExecutor().execute(() -> {
-                getActivity().runOnUiThread(() -> showDeleteConfirmationDialog(datalog));
-            });
-        });
-        adapter.setOnExportClickListener((dataList) -> showExportConfirmationDialog(dataList));
+        adapter.setOnDeleteClickListener(datalog -> showDeleteConfirmationDialog(datalog));
+        adapter.setOnExportClickListener(richDatalog -> showExportConfirmationDialog(richDatalog));
 
-        //update Dataloglist
-        sharedViewModel.getAllDatalogs().observe(getViewLifecycleOwner(), dataLists -> {
-            if (dataLists == null || dataLists.isEmpty())
+        adapter.setOnItemClickListener(richDatalog -> {
+            LoadingDialog dialog = new LoadingDialog(requireContext(),"Loading Data");
+            sharedViewModel.getDataPointsForDatalog(richDatalog.datalog.datalogId).observe(getViewLifecycleOwner(), dataPoints -> {
+                    DataList dataList = new DataList(dataPoints, richDatalog.device);
+                    switchFragment(dataList);
+                    dialog.dismiss();
+                });
+        });
+
+        //Update List
+        loadingContainer.setVisibility(View.VISIBLE);
+        sharedViewModel.getDatalogWithTimestampsAndDevice().observe(getViewLifecycleOwner(), datalogWithTimestampsAndDevices -> {
+            loadingContainer.setVisibility(View.GONE);
+            if (datalogWithTimestampsAndDevices == null || datalogWithTimestampsAndDevices.isEmpty())
                 emptyText.setVisibility(View.VISIBLE);
             else
                 emptyText.setVisibility(View.INVISIBLE);
-            adapter.update(dataLists);
-        });
+            adapter.update(datalogWithTimestampsAndDevices);
+                });
+
         recyclerView.setAdapter(adapter);
         return view;
     }
@@ -86,40 +97,50 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
     }
 
     /* Show confirmation dialog if the datalog should be really deleted */
-    private void showDeleteConfirmationDialog(DataList dataList) {
+    private void showDeleteConfirmationDialog(Datalog datalog) {
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Delete")
-                .setMessage("Really want to delete datalog?")
+                .setMessage("Do you really want to delete datalog?")
                 .setPositiveButton("Delete", (dialog, which) ->
                 {
+                    LoadingDialog loadingDialog = new LoadingDialog(requireContext(), "Deleting Data");
                     Executors.newSingleThreadExecutor().execute(() -> {
-                        sharedViewModel.deleteDatalogWithPoints(dataList.getDatalog());
+                        sharedViewModel.deleteDatalogWithPoints(datalog);
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            Toast.makeText(getContext(), "Deleted!", Toast.LENGTH_SHORT).show();
+                            loadingDialog.dismiss();
+                        });
                     });
+
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                 .show();
     }
 
     /* Show confirmation dialog if the datalog should be really exported as csv */
-    private void showExportConfirmationDialog(DataList dataList) {
-        ZonedDateTime zonedDownloadDate =Instant.ofEpochMilli(dataList.getDatalog().downloadDate).atZone(ZoneOffset.UTC);
+    private void showExportConfirmationDialog(DatalogWithTimestampsAndDevice richDatalog) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm'Z'");
-        String fileName = "0x" + Long.toHexString(dataList.getDevice().deviceId) + "_" + zonedDownloadDate.format(formatter);
+        String fileName = "0x" + Long.toHexString(richDatalog.datalog.deviceId) + "_" + Instant.ofEpochMilli(richDatalog.datalog.downloadDate).atZone(ZoneOffset.UTC).format(formatter);
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Export")
                 .setMessage("Export to:\n\"Downloads/\u200B" + fileName + ".csv\"?")
-                .setPositiveButton("Export", (dialog, which) ->
-                {
-                    if(dataList.exportCsv(this.requireContext(), fileName))
-                        Toast.makeText(getActivity(), "stored successful", Toast.LENGTH_LONG).show();
-                    else
-                        Toast.makeText(getActivity(), "Error!", Toast.LENGTH_LONG).show();
+                .setPositiveButton("Export", (dialog, which) -> {
+                    LoadingDialog loadingDialog = new LoadingDialog(requireContext(),"Exporting Data");
+                    sharedViewModel.getDataPointsForDatalog(richDatalog.datalog.datalogId).observe(getViewLifecycleOwner(), dataPoints -> {
+                            Executors.newSingleThreadExecutor().execute(() -> {
+                                boolean success = new DataList(dataPoints, richDatalog.device).exportCsv(requireContext(), fileName);
+                                new Handler(Looper.getMainLooper()).post(() -> {
+                                    Toast.makeText(getContext(), success?"Export successful!":"Export failed!", Toast.LENGTH_SHORT).show();
+                                    loadingDialog.dismiss();
+                                });
+                        });
+                    });
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                 .show();
     }
-    private void switchFragment(DataList d) {
-        sharedViewModel.setDataList(d);
+    private void switchFragment(DataList dataList) {
+        sharedViewModel.setDataList(dataList);
         androidx.fragment.app.Fragment fragment = new PlotFragment();
         FragmentTransaction transaction = getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).addToBackStack(null);
         transaction.commit();

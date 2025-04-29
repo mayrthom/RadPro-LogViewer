@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0] - 2025-04-29
+### Added
+- Store settings permanently
+### Changed
+- Restructuring of project files
+- Changes to the UI
+
 ## [0.5.1] - 2025-04-08
 ### Added
 - Display stays on while reading the datalog

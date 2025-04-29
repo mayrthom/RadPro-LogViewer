@@ -9,24 +9,20 @@
         android:title="Grid On/Off" />
 
     <item
-        android:id="@+id/unit_sievert"
-        android:title="Unit [μSv/h]"
-        android:checkable="true"/>
+        android:id="@+id/unit"
+        android:title="Change Unit" />
 
-    <item
-        android:id="@+id/unit_cpm"
-        android:title="Unit [CPM]"
-        android:checkable="true"/>
-
-    <item
-        android:id="@+id/unit_cps"
-        android:title="Unit [CPS]"
-        android:checkable="true"/>
 
     <item
         android:id="@+id/filter"
         android:title="Filter"
         android:checkable="true"/>
+
+    <item
+        android:id="@+id/store"
+        android:title="Store Datalog"
+        android:checkable="true"
+        android:visible="false"/>
 
 
 </menu>

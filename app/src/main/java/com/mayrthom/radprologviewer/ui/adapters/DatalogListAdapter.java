@@ -1,4 +1,4 @@
-package com.mayrthom.radprologviewer.database.adapters;
+package com.mayrthom.radprologviewer.ui.adapters;
 
 import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
@@ -8,8 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.mayrthom.radprologviewer.database.device.Device;
-import com.mayrthom.radprologviewer.DataList;
+import com.mayrthom.radprologviewer.database.datalog.DatalogWithTimestampsAndDevice;
 import com.mayrthom.radprologviewer.database.datalog.Datalog;
 import com.mayrthom.radprologviewer.R;
 
@@ -21,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.DatalogViewHolder> {
-    private final List<DataList> datalogList;
+    private final List<DatalogWithTimestampsAndDevice> datalogList;
     private OnItemClickListener listener;
     private OnDeleteClickListener deleteListener;
     private OnExportClickListener exportListener;
@@ -31,13 +30,13 @@ public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.
     }
 
     public interface OnItemClickListener {
-        void onItemClick(DataList dataList);
+        void onItemClick(DatalogWithTimestampsAndDevice richDatalog);
     }
     public interface OnDeleteClickListener {
-        void onDeleteClick(DataList dataList);
+        void onDeleteClick(Datalog datalog);
     }
     public interface OnExportClickListener {
-        void onExportClick(DataList dataList);
+        void onExportClick(DatalogWithTimestampsAndDevice datalogWithTimestampsAndDevice);
     }
 
     @NonNull
@@ -49,32 +48,32 @@ public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull DatalogViewHolder holder, int position) {
-        DataList dataList = datalogList.get(position); //get datalog
-        if (dataList == null) return;
-        Datalog datalog = dataList.getDatalog();
-        Device device = dataList.getDevice();
+        DatalogWithTimestampsAndDevice richDatalog = datalogList.get(position); //get datalog
+
+        if (richDatalog == null) return;
+
 
         //format the time according to the timezone on the android device
         final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         final ZoneId zoneId = ZoneId.systemDefault();
-        ZonedDateTime zonedStartTime = Instant.ofEpochSecond(dataList.getStartPoint()).atZone(zoneId);
-        ZonedDateTime zonedEndTime = Instant.ofEpochSecond(dataList.getEndPoint()).atZone(zoneId);
-        ZonedDateTime zonedDownloadDate =Instant.ofEpochMilli(datalog.downloadDate).atZone(zoneId);
+        ZonedDateTime zonedStartTime = Instant.ofEpochSecond(richDatalog.minTimestamp).atZone(zoneId);
+        ZonedDateTime zonedEndTime = Instant.ofEpochSecond(richDatalog.maxTimestamp).atZone(zoneId);
+        ZonedDateTime zonedDownloadDate =Instant.ofEpochMilli(richDatalog.datalog.downloadDate).atZone(zoneId);
 
         //set text for item
         holder.textViewDownloadDate.setText("Download Date: " + zonedDownloadDate.format(formatter));
         holder.textViewDateRange.setText("Date Range: " + zonedStartTime.format(formatter) + " - " + zonedEndTime.format(formatter));
-        holder.textViewModelName.setText(device.toString());
+        holder.textViewModelName.setText(richDatalog.device.toString());
 
         //setup listeners
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onItemClick(dataList);
+            if (listener != null) listener.onItemClick(richDatalog);
             });
         holder.buttonDelete.setOnClickListener(v -> {
-            if (deleteListener != null) deleteListener.onDeleteClick(dataList);
+            if (deleteListener != null) deleteListener.onDeleteClick(richDatalog.datalog);
             });
         holder.buttonExport.setOnClickListener(v -> {
-            if (exportListener != null) exportListener.onExportClick(dataList);
+            if (exportListener != null) exportListener.onExportClick(richDatalog);
           });
     }
 
@@ -93,9 +92,9 @@ public class DatalogListAdapter extends RecyclerView.Adapter<DatalogListAdapter.
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    public void update(List<DataList> dataLists) {
+    public void update(List<DatalogWithTimestampsAndDevice> richDatalog) {
         this.datalogList.clear();
-        this.datalogList.addAll(dataLists);
+        this.datalogList.addAll(richDatalog);
         notifyDataSetChanged();
     }
 

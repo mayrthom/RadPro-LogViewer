@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
+        android:paddingVertical="5dp"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -22,15 +23,10 @@
                 android:id="@+id/textViewDeviceValue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/textViewDateRange"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp" />
-
+                android:text="Modelname: Test Test"
+                android:lineSpacingExtra="5dp"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
         </LinearLayout>
 
         <ImageButton
@@ -38,7 +34,6 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-
             android:scaleType="centerInside"
             android:padding="8dp"
             android:src="@android:drawable/ic_menu_save"

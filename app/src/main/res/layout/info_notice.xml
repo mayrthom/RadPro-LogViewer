@@ -32,7 +32,7 @@
             android:id="@+id/textViewContent1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="- Connect your Geiger counter via USB.\n- The Geiger counter should appear under 'USB Devices'.\n- Tap on the USB device to select it.\n"
+            android:text="- Connect your Geiger counter via USB.\n- The Geiger counter should appear under 'USB Devices'.\n- Tap on the USB device to select it.\n- Tap 'VIEW DATA' to load the plot.\n- To store the datalog go to the menu on the top right and select 'Store Datalog' \n"
             android:textSize="16sp"
             android:textColor="@android:color/black"
             android:lineSpacingExtra="4dp"/>

@@ -21,12 +21,10 @@ public class Device {
     //Generate Device from serial string
     public Device(String deviceString, float conversionValue) throws Exception {
         try {
-            deviceString = deviceString.split("OK ")[1];
-            deviceString = deviceString.replaceAll("\\r|\\n", "");
+            deviceString = deviceString.replaceAll("OK|\\r|\\n", "");
             String[] s = deviceString.split(";");
             String serialNumberString = s[2];
             this.deviceType = s[0];
-            serialNumberString = serialNumberString.replaceAll("[^0-9a-fA-F]", "");
             this.deviceId = Long.parseLong(serialNumberString,16);
             this.conversionValue = conversionValue;
         }

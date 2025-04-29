@@ -1,4 +1,4 @@
-package com.mayrthom.radprologviewer;
+package com.mayrthom.radprologviewer.utils;
 
 import com.github.mikephil.charting.data.Entry;
 

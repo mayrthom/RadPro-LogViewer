@@ -10,16 +10,16 @@ import com.mayrthom.radprologviewer.database.device.Device;
 @Entity(foreignKeys = @ForeignKey(
         entity = Device.class,
         parentColumns = "deviceId",
-        childColumns = "deviceId",
+        childColumns = "datalog_device_id",
         onDelete = ForeignKey.CASCADE
 ))
 public class Datalog {
     @PrimaryKey(autoGenerate = true)
     public long datalogId;
-    @ColumnInfo(name = "deviceId", index = true)
+
+    @ColumnInfo(name = "datalog_device_id", index = true)
     public final long deviceId;
     public final long downloadDate;
-
 
     public Datalog(long downloadDate, long deviceId) {
         this.downloadDate = downloadDate;

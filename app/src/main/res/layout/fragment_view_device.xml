@@ -2,10 +2,11 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 android:layout_width="match_parent"
 android:layout_height="match_parent"
-android:layout_marginLeft="5dp"
+android:layout_marginLeft="10dp"
 android:layout_marginTop="10dp"
-android:layout_marginRight="5dp"
-android:orientation="vertical">
+android:layout_marginRight="10dp"
+android:orientation="vertical"
+android:gravity = "center_horizontal">
 
         <TextView
             android:id="@+id/textView"
@@ -13,6 +14,7 @@ android:orientation="vertical">
             android:layout_height="wrap_content"
             android:text="Geiger Counter:"
             android:layout_marginBottom="10sp"
+            android:layout_marginHorizontal="8dp"
             android:textSize="24sp"
             android:textStyle="bold"/>
 
@@ -20,8 +22,8 @@ android:orientation="vertical">
             android:id="@+id/device_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
             android:text="\?\?\?\n"
-            android:layout_marginEnd="5dp"
             android:textSize="22sp"/>
 
         <Button
@@ -39,16 +41,23 @@ android:orientation="vertical">
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="10dp"
-            android:text="Download and View"
+            android:text="View and Reset Datalog"
             android:textStyle="bold"
             style="@style/ButtonStyle"/>
 
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:indeterminate="true" />
+
         <TextView
             android:id="@+id/status_text"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Not Connected\nConnecting..."
             android:gravity="center"
             android:textSize="24sp"
+            android:layout_marginHorizontal="8dp"
             android:textStyle="bold"/>
         </LinearLayout>

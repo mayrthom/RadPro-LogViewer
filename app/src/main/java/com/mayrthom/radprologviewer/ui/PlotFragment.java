@@ -1,5 +1,10 @@
 package com.mayrthom.radprologviewer.ui;
 
+import static android.content.Context.MODE_PRIVATE;
+
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.activity.OnBackPressedCallback;
@@ -20,6 +25,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
@@ -31,8 +37,9 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.mayrthom.radprologviewer.R;
-import com.mayrthom.radprologviewer.DataList;
+import com.mayrthom.radprologviewer.database.DataList;
 import com.mayrthom.radprologviewer.viewModel.SharedViewModel;
+import com.mayrthom.radprologviewer.viewModel.SharedViewModelFactory;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -40,31 +47,54 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class PlotFragment extends androidx.fragment.app.Fragment {
     private LineChart chart;
     private boolean grid = true;
     private boolean circles = false;
-    private boolean filterActive = false;
+    private boolean filterOn = false;
     private SeekBar seekBar;
     private TextView filterText;
-    private enum Unit {CPS, CPM, SIEVERT}
+    private enum Unit {CPM, CPS, SIEVERT}
     private Unit unit = Unit.CPM;
     private DataList dataList;
     private int filterWindow = 0;
     private final int filterMax = 100;
     private int lineColor, backcolor, textcolor;
+    SharedViewModel sharedViewModel;
+    boolean store = false, stored = false;
+    SharedPreferences sharedPreferences;
+    SharedPreferences.Editor editor;
+
 
     @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_plot,container, false);
+        loadPreferences();
+        if (getArguments() != null) {
+            store = getArguments().getBoolean("store");
+        }
+        SharedViewModelFactory factory = new SharedViewModelFactory(requireContext());
+        sharedViewModel = new ViewModelProvider(requireActivity(), factory).get(SharedViewModel.class);
+        sharedViewModel.getDataList().observe(getViewLifecycleOwner(), d -> {
+            if (d != null) {
+                dataList = d;
+                seekBar.setMax(Math.min(d.size(), filterMax));
+                updateFilter();
+                setData();
+            }});
 
         requireActivity().addMenuProvider(new MenuProvider() {
             @Override
             public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
                 menuInflater.inflate(R.menu.menu_plot, menu);
+                if(store && !dataList.isEmpty())
+                    menu.findItem(R.id.store).setVisible(true);
             }
 
             @Override
@@ -72,31 +102,34 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
                 // Handle menu item clicks
                 int id = item.getItemId();
 
-                if(id == R.id.circles) {
+                if(id == R.id.circles)
                     toggleCircles();
-                }
-                else if(id == R.id.grid) {
+                else if(id == R.id.grid)
                     toggleGrid();
-                }
-                else if(id == R.id.unit_cpm) {
-                    unit = Unit.CPM;
-                    setData();
-                }
-                else if(id == R.id.unit_sievert) {
-                    unit = Unit.SIEVERT;
-                    setData();
-                }
-                else if(id == R.id.unit_cps) {
-                    unit = Unit.CPS;
-                    setData();
-                }
+                else if(id == R.id.unit)
+                    showSetUnitDialog();
                 else if(id == R.id.filter)
                 {
-                    filterActive = !filterActive;
+                    filterOn = !filterOn;
+                    editor.putBoolean("filterOn", filterOn);
+                    editor.apply();
                     updateFilter();
                     setData();
                 }
+                else if(id == R.id.store)
+                {
+                    LoadingDialog dialog = new LoadingDialog(requireContext(),"Storing Data");
+                    ExecutorService executor = Executors.newSingleThreadExecutor();
+                    executor.execute(() -> {
+                    sharedViewModel.addDatalogWithEntries(dataList);
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        stored = true;
+                        Toast.makeText(requireContext(), "Datalog stored!", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                        });
+                    });
 
+                }
                 requireActivity().invalidateOptionsMenu(); // reload the menu
                 chart.notifyDataSetChanged();
                 chart.invalidate();
@@ -105,28 +138,13 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
 
             @Override
             public void onPrepareMenu(@NonNull Menu menu) {
-                menu.findItem(R.id.filter).setChecked(filterActive);
-                menu.findItem(R.id.unit_cpm).setChecked(false);
-                menu.findItem(R.id.unit_cps).setChecked(false);
-                menu.findItem(R.id.unit_sievert).setChecked(false);
-
-                switch (unit)
-                {
-                    case CPM:
-                        menu.findItem(R.id.unit_cpm).setChecked(true);
-                        break;
-                    case CPS:
-                        menu.findItem(R.id.unit_cps).setChecked(true);
-                        break;
-                    case SIEVERT:
-                        menu.findItem(R.id.unit_sievert).setChecked(true);
-                        break;
-                }
+                menu.findItem(R.id.filter).setChecked(filterOn);
+                menu.findItem(R.id.store).setChecked(stored);
+                menu.findItem(R.id.store).setEnabled(!stored);
             }
         }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
 
         seekBar = view.findViewById(R.id.seekBar1);
-
         filterText = view.findViewById(R.id.filterText);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -142,14 +160,6 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
             }
         });
 
-        SharedViewModel sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
-        sharedViewModel.getDataList().observe(getViewLifecycleOwner(), d -> {
-            if (d != null) {
-                dataList = d;
-                seekBar.setMax(Math.min(d.size(), filterMax));
-                updateFilter();
-                setData();
-            }});
 
         /*get the colors according to the current theme*/
         TypedValue typedValue = new TypedValue();
@@ -194,6 +204,7 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
 
         YAxis rightAxis = chart.getAxisRight();
         rightAxis.setEnabled(false);
+
         return view;
     }
 
@@ -210,11 +221,14 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
         });
     }
 
+
+
     private void setData() {
         //get Entryset filtered or unfiltered according to the menu option
-        List<Entry> entries = toggleUnit(filterActive ? dataList.getFilteredEntrySet(filterWindow) : dataList.getEntrySet() ,unit);
+        List<Entry> entries = toggleUnit(filterOn ? dataList.getFilteredEntrySet(filterWindow) : dataList.getEntrySet() ,unit);
         //now set data
-        if(entries != null && !entries.isEmpty()) {
+
+        if(!entries.isEmpty()) {
             LineDataSet set = new LineDataSet(entries, "Radiation");
             set.setAxisDependency(AxisDependency.LEFT);
             set.setColor(lineColor);
@@ -270,6 +284,8 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
     {
         LineDataSet lineDataSet0 = (LineDataSet) chart.getLineData().getDataSetByIndex(0);
         circles = !circles;
+        editor.putBoolean("circles",circles);
+        editor.apply();
         lineDataSet0.setDrawCircles(circles);
 
         chart.notifyDataSetChanged();
@@ -279,6 +295,9 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
     private void toggleGrid()
     {
         grid = !grid;
+        editor.putBoolean("grid",grid);
+        editor.apply();
+
         chart.getXAxis().setDrawGridLines(grid);
         chart.getAxisLeft().setDrawGridLines(grid);
 
@@ -313,18 +332,48 @@ public class PlotFragment extends androidx.fragment.app.Fragment {
     }
     private void updateFilter()
     {
-        if(filterWindow== 0) {
+        if(filterWindow == 0) {
             filterWindow = seekBar.getMax() / 2;
             seekBar.setProgress(filterWindow);
         }
 
-        if (filterActive) {
+        if (filterOn) {
             seekBar.setVisibility(View.VISIBLE);
             filterText.setVisibility(View.VISIBLE);
         }
+
         else {
             seekBar.setVisibility(View.GONE);
             filterText.setVisibility(View.GONE);
         }
     }
+
+    private void showSetUnitDialog() {
+        final String[] units = {"CPM", "CPS", "μSv/h", };
+
+        new AlertDialog.Builder(getContext())
+                .setTitle("Choose Unit")
+                .setItems(units, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int num) {
+                        unit = Unit.values()[num];
+                        editor.putInt("unit", num);
+                        editor.apply();
+                        setData();
+                    }
+                })
+                .show();
+    }
+
+    void loadPreferences()
+    {
+        sharedPreferences = requireContext().getSharedPreferences("plotSettings", MODE_PRIVATE);
+        editor = sharedPreferences.edit();
+        circles = sharedPreferences.getBoolean("circles", false);
+        grid = sharedPreferences.getBoolean("grid", true);
+        unit = Unit.values()[sharedPreferences.getInt("unit",Unit.CPM.ordinal())];
+        filterOn = sharedPreferences.getBoolean("filterOn", false);
+    }
+
+
 }
