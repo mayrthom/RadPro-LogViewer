@@ -1,5 +1,0 @@
-<resources>
-    <style name="Theme.RadProLogViewer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:textColor">@color/white</item>
-    </style>
-</resources>
