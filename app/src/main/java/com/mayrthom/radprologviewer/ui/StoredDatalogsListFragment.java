@@ -120,7 +120,7 @@ public class StoredDatalogsListFragment extends androidx.fragment.app.Fragment {
     /* Show confirmation dialog if the datalog should be really exported as csv */
     private void showExportConfirmationDialog(DatalogWithTimestampsAndDevice richDatalog) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm'Z'");
-        String fileName = "0x" + Long.toHexString(richDatalog.datalog.deviceId) + "_" + Instant.ofEpochMilli(richDatalog.datalog.downloadDate).atZone(ZoneOffset.UTC).format(formatter);
+        String fileName = "0x" + richDatalog.datalog.deviceId + "_" + Instant.ofEpochMilli(richDatalog.datalog.downloadDate).atZone(ZoneOffset.UTC).format(formatter);
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Export")
                 .setMessage("Export to:\n\"Downloads/\u200B" + fileName + ".csv\"?")

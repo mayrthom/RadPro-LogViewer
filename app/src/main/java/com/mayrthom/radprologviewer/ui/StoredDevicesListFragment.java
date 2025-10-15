@@ -114,7 +114,7 @@ public class StoredDevicesListFragment extends androidx.fragment.app.Fragment {
 
     /* Show confirmation dialog if the datalog should be really exported as csv */
     private void showExportConfirmationDialog(Device device) {
-        String fileName = device.deviceType + "_0x" + Long.toHexString(device.deviceId);
+        String fileName = device.deviceType + "_0x" + device.deviceId;
         new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle("Confirm Export")
                 .setMessage("Export to:\n\"Downloads/\u200B" + fileName + ".csv\"?")

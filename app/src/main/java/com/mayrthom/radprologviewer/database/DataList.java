@@ -47,36 +47,50 @@ public class DataList extends ArrayList<DataPoint> {
     }
 
      //creating the datalist from the csv input string
-    private List<DataPoint> createDataPointList(String csv)
-    {
-        csv = csv.replaceAll("(\\r|\\n)", "");
-        String[] parts = csv.split(";");
-        List<long[]> values = Arrays.stream(parts, 1, parts.length)
-                .map(s -> s.split(","))
-                .map(arr -> new long[]{Long.parseLong(arr[0]), Long.parseLong(arr[1])})
-                .collect(Collectors.toList());
-        if(values.isEmpty())
-            return new ArrayList<>();
+     private List<DataPoint> createDataPointList(String csv) {
+         csv = csv.replaceAll("(\\r|\\n)", "");
+         String[] parts = csv.split(";");
+         List<long[]> values = Arrays.stream(parts, 1, parts.length)
+                 .map(String::trim)
+                 .filter(s -> !s.isEmpty())
+                 .filter(s -> s.contains(","))
+                 .map(s -> s.split(","))
+                 .filter(arr -> arr.length == 2
+                         && !arr[0].isEmpty()
+                         && !arr[1].isEmpty())
+                 .map(arr -> {
+                     try {
+                         long t = Long.parseLong(arr[0]);
+                         long v = Long.parseLong(arr[1]);
+                         return new long[]{t, v};
+                     } catch (NumberFormatException e) {
+                         return null;
+                     }
+                 })
+                 .filter(x -> x != null)
+                 .collect(Collectors.toList());
 
-        return IntStream.range(0, values.size() - 1)
-                .mapToObj(i -> {
-                    long t1 = values.get(i)[0];
-                    long t2 = values.get(i + 1)[0];
-                    if(t1 == t2)
-                        return null;
+         if (values.size() < 2) return new ArrayList<>();
 
-                    long v1 = values.get(i)[1];
-                    long v2 = values.get(i + 1)[1];
-                    long time =  ((t2-t1))/2 + t1;
-                    float radiation = ((float)(v2-v1) / (float)(t2-t1) ); //value in CPS
-                    if(radiation <0)
-                        return null;
+         return IntStream.range(0, values.size() - 1)
+                 .mapToObj(i -> {
+                     long t1 = values.get(i)[0];
+                     long t2 = values.get(i + 1)[0];
+                     if (t1 == t2) return null;
 
-                    return new DataPoint(0,radiation,time);
-                })
-                .filter(x -> x!= null)
-                .collect(Collectors.toList());
-    }
+                     long v1 = values.get(i)[1];
+                     long v2 = values.get(i + 1)[1];
+
+                     long time = ((t2 - t1)) / 2 + t1;
+                     float radiation = ((float) (v2 - v1) / (float) (t2 - t1)); // CPS
+                     if (radiation < 0) return null;
+
+                     return new DataPoint(0, radiation, time);
+                 })
+                 .filter(x -> x != null)
+                 .collect(Collectors.toList());
+     }
+
 
     // Saving a csv of the datalist file into the Download Directory with a given file Name
     public boolean exportCsv(Context context, String fileName) {

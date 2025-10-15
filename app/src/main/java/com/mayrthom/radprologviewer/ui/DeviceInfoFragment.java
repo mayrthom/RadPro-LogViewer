@@ -167,8 +167,6 @@ public class DeviceInfoFragment extends Fragment {
 
     private Device getDevice() throws Exception {
         String s = serialPortManager.sendAndRead("GET tubeSensitivity",1000);
-        if (s.contains("ERROR"))
-            s = serialPortManager.sendAndRead("GET tubeConversionFactor",1000);
         float factor = Float.parseFloat(s.replace("OK ", "").trim());
         String id = serialPortManager.sendAndRead("GET deviceId",1000).replace("OK ", "").trim();
         return new Device(id, factor);

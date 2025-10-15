@@ -8,11 +8,12 @@ import androidx.room.PrimaryKey;
 public class Device {
 
     @PrimaryKey()
-    public long deviceId; //deviceId is the Unique ID of the Microcontroller of the Geiger counter
+    @NonNull
+    public String deviceId; //deviceId is the Unique ID of the Microcontroller of the Geiger counter
     public String deviceType;
     public float conversionValue;
 
-    public Device(String deviceType, long deviceId, Float conversionValue) {
+    public Device(String deviceType, String deviceId, Float conversionValue) {
         this.deviceType = deviceType;
         this.deviceId = deviceId;
         this.conversionValue = conversionValue;
@@ -25,10 +26,11 @@ public class Device {
             String[] s = deviceString.split(";");
             String serialNumberString = s[2];
             this.deviceType = s[0];
-            this.deviceId = Long.parseLong(serialNumberString,16);
+            this.deviceId = serialNumberString;
             this.conversionValue = conversionValue;
         }
         catch(Exception e) {
+
             throw new Exception("Wrong Input");
         }
     }
@@ -36,7 +38,7 @@ public class Device {
     @NonNull
     @Override
     public String toString() {
-        return "Model Name: " + deviceType +  "\nSerial Number: 0x" + Long.toHexString(deviceId);
+        return "Model Name: " + deviceType +  "\nSerial Number: 0x" + deviceId;
     }
 
 }

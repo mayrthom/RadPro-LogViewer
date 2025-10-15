@@ -45,7 +45,7 @@ public class Repository {
     }
     public void addDatalogWithEntries(DataList datalist) {
             Device device = datalist.getDevice();
-            long deviceId = device.deviceId;
+            String deviceId = device.deviceId;
             if (deviceDao.exists(deviceId))
                 deviceDao.updateDevice(device);
             else
@@ -68,7 +68,7 @@ public class Repository {
         return dataPointDao.getDataPointsForDatalog(datalogId);
     }
 
-    public LiveData<List<DataPoint>> getDataPointsForDevice(long deviceId) {
+    public LiveData<List<DataPoint>> getDataPointsForDevice(String deviceId) {
         return dataPointDao.getDataPointsForDevice(deviceId);
     }
 }

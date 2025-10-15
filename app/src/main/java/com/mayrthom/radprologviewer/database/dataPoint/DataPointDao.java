@@ -17,6 +17,6 @@ public interface DataPointDao {
     LiveData<List<DataPoint>> getDataPointsForDatalog(long datalogId);
 
     @Query("SELECT dp.* FROM DataPoint dp JOIN Datalog dl ON dp.datalogId = dl.datalogId WHERE dl.datalog_device_id = :deviceId GROUP BY dp.timestamp ORDER BY dp.timestamp ASC")
-        LiveData<List<DataPoint>> getDataPointsForDevice(long deviceId);
+        LiveData<List<DataPoint>> getDataPointsForDevice(String deviceId);
 
 }

@@ -47,7 +47,7 @@ public class SharedViewModel extends ViewModel {
         return repository.getAllDevices();
     }
 
-    public LiveData<List<DataPoint>> loadDataPointsForDevice(long deviceId) {
+    public LiveData<List<DataPoint>> loadDataPointsForDevice(String deviceId) {
         return repository.getDataPointsForDevice(deviceId);
     }
 

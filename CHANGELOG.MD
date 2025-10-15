@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.1] - 2025-10-15
+### Fixed
+- Compatibility with the new firmware: deviceId has grown from 8 to 24 hex characters (32 → 96 bits). It’s now stored as a string instead of a long.
+
 ## [1.0.0] - 2025-04-29
 ### Added
 - Store settings permanently

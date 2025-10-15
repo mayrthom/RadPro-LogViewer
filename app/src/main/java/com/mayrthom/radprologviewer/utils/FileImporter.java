@@ -31,7 +31,7 @@ public class FileImporter {
                 try {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(context.getContentResolver().openInputStream(uri)));
                     Device device = new Gson().fromJson(reader.readLine(), new TypeToken<Device>() {}.getType()); // first line is device object stored as json
-                    if (device == null || device.deviceId == 0 || device.deviceType == null || device.conversionValue == 0)
+                    if (device == null || device.deviceId.isEmpty() || device.deviceType == null || device.conversionValue == 0)
                         throw new IOException("Wrong input format!");
                     if (!reader.readLine().contains("time,radiation[CPS]")) // second line must be the title
                         throw new IOException("Wrong input format!");

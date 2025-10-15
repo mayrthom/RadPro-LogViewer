@@ -18,10 +18,10 @@ public class Datalog {
     public long datalogId;
 
     @ColumnInfo(name = "datalog_device_id", index = true)
-    public final long deviceId;
+    public final String deviceId;
     public final long downloadDate;
 
-    public Datalog(long downloadDate, long deviceId) {
+    public Datalog(long downloadDate, String deviceId) {
         this.downloadDate = downloadDate;
         this.deviceId = deviceId;
     }

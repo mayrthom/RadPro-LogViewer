@@ -15,7 +15,7 @@ public interface DatalogDao {
     void deleteDatalogById(long datalogId);
 
     @Query("SELECT COUNT(*) FROM Datalog WHERE datalog_device_id = :deviceId")
-    int getDatalogCountForDevice(long deviceId);
+    int getDatalogCountForDevice(String deviceId);
 
     @Query("SELECT dl.datalogId, " +
             "dl.datalog_device_id, "+
