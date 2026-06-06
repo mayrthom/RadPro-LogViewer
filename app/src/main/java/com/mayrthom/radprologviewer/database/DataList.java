@@ -48,47 +48,62 @@ public class DataList extends ArrayList<DataPoint> {
 
      //creating the datalist from the csv input string
      private List<DataPoint> createDataPointList(String csv) {
-         csv = csv.replaceAll("(\\r|\\n)", "");
-         String[] parts = csv.split(";");
-         List<long[]> values = Arrays.stream(parts, 1, parts.length)
-                 .map(String::trim)
-                 .filter(s -> !s.isEmpty())
-                 .filter(s -> s.contains(","))
-                 .map(s -> s.split(","))
-                 .filter(arr -> arr.length == 2
-                         && !arr[0].isEmpty()
-                         && !arr[1].isEmpty())
-                 .map(arr -> {
-                     try {
-                         long t = Long.parseLong(arr[0]);
-                         long v = Long.parseLong(arr[1]);
-                         return new long[]{t, v};
-                     } catch (NumberFormatException e) {
-                         return null;
+         if (csv == null || csv.trim().isEmpty()) {
+             return new ArrayList<>();
+         }
+
+         String normalized = csv.replace('\r', ';').replace('\n', ';');
+         String[] parts = normalized.split(";", -1);
+
+         List<DataPoint> result = new ArrayList<>();
+         long[] previous = null;
+
+         for (String part : parts) {
+             String s = part.trim();
+
+             // empty entry by ";;"
+             if (s.isEmpty()) {
+                 previous = null;
+                 continue;
+             }
+
+             // ignore header e.g. "OK time,tubePulseCount"
+             if (s.startsWith("OK") || s.toLowerCase().contains("time")) {
+                 continue;
+             }
+
+             String[] arr = s.split(",");
+             if (arr.length != 2) {
+                 continue;
+             }
+
+             try {
+                 long t = Long.parseLong(arr[0].trim());
+                 long v = Long.parseLong(arr[1].trim());
+
+                 long[] current = new long[]{t, v};
+
+                 if (previous != null) {
+                     long t1 = previous[0];
+                     long v1 = previous[1];
+
+                     if (t != t1) {
+                         long time = ((t - t1) / 2) + t1;
+                         float radiation = (float) (v - v1) / (float) (t - t1);
+
+                         if (radiation >= 0) {
+                             result.add(new DataPoint(0, radiation, time));
+                         }
                      }
-                 })
-                 .filter(x -> x != null)
-                 .collect(Collectors.toList());
+                 }
 
-         if (values.size() < 2) return new ArrayList<>();
+                 previous = current;
 
-         return IntStream.range(0, values.size() - 1)
-                 .mapToObj(i -> {
-                     long t1 = values.get(i)[0];
-                     long t2 = values.get(i + 1)[0];
-                     if (t1 == t2) return null;
+             } catch (NumberFormatException ignored) {
+             }
+         }
 
-                     long v1 = values.get(i)[1];
-                     long v2 = values.get(i + 1)[1];
-
-                     long time = ((t2 - t1)) / 2 + t1;
-                     float radiation = ((float) (v2 - v1) / (float) (t2 - t1)); // CPS
-                     if (radiation < 0) return null;
-
-                     return new DataPoint(0, radiation, time);
-                 })
-                 .filter(x -> x != null)
-                 .collect(Collectors.toList());
+         return result;
      }
 
 
